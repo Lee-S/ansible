@@ -1,0 +1,10 @@
+---
+
+
+- name: Install package from repos
+  become: yes
+  community.general.pacman:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - "pycharm-community-edition"

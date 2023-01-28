@@ -1,0 +1,14 @@
+---
+- name: Install package from repo
+  become: yes
+  community.general.pacman:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - "bat"
+    - "exa"
+    - "tmux"
+    - "alacritty"
+    - "neovim"
+    - "vim"
+    - "htop"

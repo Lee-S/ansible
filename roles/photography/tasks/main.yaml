@@ -1,0 +1,8 @@
+---
+- name: Install photography tools
+  become: true
+  dnf:
+    name:
+      - "gimp"
+      - "darktable"
+    state: "present"

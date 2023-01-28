@@ -1,0 +1,56 @@
+- name: Install package from repos
+  become: yes
+  community.general.pacman:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - lm_sensors
+    - stress
+
+## Setup kewlfft
+- name: Create the `aur_builder` user
+  become: yes
+  ansible.builtin.user:
+    name: aur_builder
+    create_home: yes
+    group: wheel
+
+- name: Allow the `aur_builder` user to run `sudo pacman` without a password
+  become: yes
+  ansible.builtin.lineinfile:
+    path: /etc/sudoers.d/11-install-aur_builder
+    line: 'aur_builder ALL=(ALL) NOPASSWD: /usr/bin/pacman'
+    create: yes
+    validate: 'visudo -cf %s'
+
+- name: Install packages using paru
+  kewlfft.aur.aur:
+    use: paru
+    name:
+      - thinkfan-git
+
+- name: Add the thinkfan_acpi module
+  community.general.modprobe:
+    name: thinkpad_acpi
+    state: present
+
+- name: Copy thinkfan confignf
+  become: yes
+  copy:
+    src: thinkfan_yoga_x1.conf
+    dest: /etc/thinkfan.conf
+
+
+- name: Enable thinkpad_scpi fan_control
+  become: yes
+  copy:
+    dest: /etc/modprobe.d/99-thinkfan.conf
+    content: |
+      options thinkpad_acpi fan_control=1
+
+- name: Make sure thinkfan service is running
+  become: yes
+  ansible.builtin.systemd:
+    state: restarted
+    enabled: true
+    name: thinkfan
