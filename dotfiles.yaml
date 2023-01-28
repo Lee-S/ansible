@@ -8,6 +8,6 @@
     - "cli"
 #    - "data-analysis"
 #    - "fonts"
-#    - "photography"
+    - "photography"
     - "development"
-#    - "desktop"
+    - "desktop"

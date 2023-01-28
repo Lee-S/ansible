@@ -1,8 +1,10 @@
 ---
-- name: Install photography tools
-  become: true
-  dnf:
-    name:
-      - "gimp"
-      - "darktable"
-    state: "present"
+- name: Install package from repos
+  become: yes
+  community.general.pacman:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - "gimp"
+    - "darktable"
+    - "digikam"

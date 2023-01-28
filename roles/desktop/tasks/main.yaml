@@ -1,21 +1,12 @@
 ---
-- name: Install Desktop Tools DNF
-  become: true
-  dnf:
+- name: Install package from repos
+  become: yes
+  community.general.pacman:
     name: "{{ item }}"
     state: present
   loop:
     - "solaar"
     - "conky"
-    # pcloud
-
-
-
-- name: Install Pycharm from snap
-  become: yes
-  community.general.snap:
-    name: "{{ item }}"
-    classic: true
-  loop:
-    - "bitwarden"
+    - "kdeconnect"
     - "cameractrls"
+
