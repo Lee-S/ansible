@@ -37,8 +37,8 @@
 - name: Copy thinkfan confignf
   become: yes
   copy:
-    src: thinkfan_yoga_x1.conf
-    dest: /etc/thinkfan.conf
+    src: thinkfan.yaml
+    dest: /etc/thinkfan.yaml
 
 
 - name: Enable thinkpad_scpi fan_control
