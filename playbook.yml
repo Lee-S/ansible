@@ -1,0 +1,17 @@
+---
+- hosts: all
+  remote_user: root
+  become: true
+  roles:
+    - role: diodonfrost.jetbrains_toolbox
+      vars:
+        jetbrains_toolbox_version: "latest"  
+        jetbrains_tools_to_install: ["pycharm-community"]
+        
+  tasks:
+    - include_tasks: roles/packages/tasks/main.yml
+      tags: packages
+          
+        
+        
+

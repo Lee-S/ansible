@@ -1,0 +1,20 @@
+apt:
+  install:
+    - autojump
+    - celeste
+    - bat
+    - btop
+    - dconf-editor
+    - fzf
+    - gnome-tweaks
+    - htop
+    - ripgrep
+    - snapd
+    - thefuck
+    - tlp
+    - tmux
+    - tree
+    - vim
+    - yubikey-manager-qt
+    - solaar
+  remove:

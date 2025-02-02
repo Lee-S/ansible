@@ -1,0 +1,19 @@
+---
+- name: include vars
+  include_vars: ../vars/main.yml
+
+- name: Install or remove apt packages on Debian or Ubuntu
+  block:
+    - name: Install apt packages
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ apt.install }}"
+
+    - name: Remove apt packages
+      apt:
+        name: "{{ item }}"
+        state: absent
+      loop: "{{ apt.remove }}"
+  become: true
+  tags: packages
