@@ -10,10 +10,32 @@
         state: present
       loop: "{{ apt.install }}"
 
-    - name: Remove apt packages
-      apt:
-        name: "{{ item }}"
-        state: absent
-      loop: "{{ apt.remove }}"
+    # - name: Remove apt packages
+    #   apt:
+    #     name: "{{ item }}"
+    #     state: absent
+    #   loop: "{{ apt.remove }}"
+    #   when: apt.remove is defined
   become: true
   tags: packages
+
+- name: Install laptop-specific packages
+  block:
+    - name: Install laptop apt packages
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ apt.install_laptop }}"
+      when: ansible_facts['product_version'] is search('ThinkPad')
+  become: true
+  tags: packages laptop
+
+- name: Disable fingerprint for sudo
+  lineinfile:
+    path: /etc/pam.d/common-auth
+    line: "auth sufficient pam_unix.so try_first_pass likeauth nullok"
+    state: present
+    insertbefore: BOF
+  become: true
+  tags: fingerprint
+

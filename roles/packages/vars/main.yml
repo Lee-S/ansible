@@ -1,8 +1,6 @@
 apt:
   install:
     - autojump
-    - celeste
-    - bat
     - btop
     - dconf-editor
     - fzf
@@ -17,4 +15,17 @@ apt:
     - vim
     - yubikey-manager-qt
     - solaar
-  remove:
+    - silversearcher-ag
+    - lm-sensors
+    - hardinfo
+    - inxi
+    - stress
+  # remove:
+  install_laptop:
+    - fprintd  # Fingerprint - laptop only 
+    - libpam-fprintd # Fingerprint - laptop only
+    - bat # battery
+
+
+
+

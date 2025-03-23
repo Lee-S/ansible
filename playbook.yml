@@ -11,6 +11,8 @@
   tasks:
     - include_tasks: roles/packages/tasks/main.yml
       tags: packages
+    - include_tasks: roles/zsh/tasks/main.yml
+      tags: zsh
           
         
         
