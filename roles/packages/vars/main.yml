@@ -27,7 +27,7 @@ apt:
     - libpam-fprintd # Fingerprint - laptop only
     - bat # battery
     - thinkfan # laptop only
-    - thinkfan-ui
+
     
 
 

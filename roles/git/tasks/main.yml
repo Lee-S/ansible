@@ -1,0 +1,26 @@
+---
+- name: Ensure Git is installed
+  apt:
+    name: git
+    state: present
+  become: true
+
+- name: Debug Git variables
+  debug:
+    msg:
+      - "Git user name: {{ git_user_name }}"
+      - "Git user email: {{ git_user_email }}"
+      - "Git default editor: {{ git_default_editor }}"
+
+- name: Set Git user name
+  command: git config --global user.name "{{ git_user_name }}"
+  when: git_user_name is defined
+
+- name: Set Git user email
+  command: git config --global user.email "{{ git_user_email }}"
+  when: git_user_email is defined
+
+- name: Set Git default editor
+  command: git config --global core.editor "{{ git_default_editor }}"
+  when: git_default_editor is defined
+  
