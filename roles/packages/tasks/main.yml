@@ -39,3 +39,17 @@
   become: true
   tags: fingerprint
 
+# - name: Enable boot logging on Ubuntu
+#   lineinfile:
+#     path: /etc/default/grub
+#     regexp: '^GRUB_CMDLINE_LINUX_DEFAULT='
+#     line: 'GRUB_CMDLINE_LINUX_DEFAULT="bootlogd=1"'
+#   notify: Update grub
+#   become: true
+#   tags: boot_logging
+
+# - name: Update grub configuration
+#   command: update-grub
+#   become: true
+#   tags: boot_logging
+

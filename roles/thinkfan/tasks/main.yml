@@ -1,0 +1,28 @@
+---
+- name: Install thinkfan package
+  apt:
+    name: thinkfan
+    state: present
+  become: true
+
+- name: Enable thinkfan in /etc/default/thinkfan
+  lineinfile:
+    path: /etc/default/thinkfan
+    regexp: '^START='
+    line: 'START=yes'
+  become: true
+
+- name: Configure thinkfan
+  copy:
+    dest: "{{ thinkfan_config_path }}"
+    content: |
+      {{ thinkfan_sensors }}
+      {{ thinkfan_levels }}
+  become: true
+
+- name: Enable and start thinkfan service
+  systemd:
+    name: "{{ thinkfan_service_name }}"
+    enabled: true
+    state: started
+  become: true

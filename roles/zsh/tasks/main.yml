@@ -1,71 +1,61 @@
 ---
-  - tasks:
-    name: Install Zsh
-    apt:
-      name: zsh
-      state: present
+- name: Install Zsh
+  apt:
+    name: zsh
+    state: present
 
-  #   - name: Add zsh to /etc/shells
-  #     lineinfile:
-  #       path: /etc/shells
-  #       line: "{{ ansible_facts.zsh_bin }}"
-  #       state: present
-  #       create: true
-  #     vars:
-  #       zsh_bin: "{{ ansible_facts.zsh_bin | default('/bin/zsh') }}"
+- name: Change default shell to Zsh for the user
+  user:
+    name: "{{ ansible_user_id }}"
+    shell: "{{ ansible_facts.zsh_bin | default('/bin/zsh') }}"
 
-  #   - name: Change default shell to Zsh for the user
-  #     user:
-  #       name: "{{ ansible_user_id }}"
-  #       shell: "{{ ansible_facts.zsh_bin | default('/bin/zsh') }}"
+- name: Install git (required for Oh My Zsh)
+  apt:
+    name: git
+    state: present
 
-  #   - name: Install git (required for Oh My Zsh)
-  #     apt:
-  #       name: git
-  #       state: present
+- name: Install curl (required for Oh My Zsh)
+  apt:
+    name: curl
+    state: present
 
-  #   - name: Install curl (required for Oh My Zsh)
-  #     apt:
-  #       name: curl
-  #       state: present
+- name: Install Oh My Zsh
+  shell: sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+  args:
+    creates: "{{ ansible_user_dir }}/.oh-my-zsh"
+  become_user: "{{ ansible_user_id }}"
 
-  #   - name: Install Oh My Zsh
-  #     shell: sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
-  #     args:
-  #       creates: "{{ ansible_user_dir }}/.oh-my-zsh"
-  #     become_user: "{{ ansible_user_id }}"
+- name: Configure Oh My Zsh theme (e.g., agnoster)
+  lineinfile:
+    path: "{{ ansible_user_dir }}/.zshrc"
+    regexp: '^ZSH_THEME='
+    line: 'ZSH_THEME="agnoster"'
+  become_user: "{{ ansible_user_id }}"
 
-  #   - name: Configure Oh My Zsh theme (e.g., agnoster)
-  #     lineinfile:
-  #       path: "{{ ansible_user_dir }}/.zshrc"
-  #       regexp: '^ZSH_THEME='
-  #       line: 'ZSH_THEME="agnoster"'
-  #     become_user: "{{ ansible_user_id }}"
+- name: Configure Oh My Zsh plugins (e.g., git, docker, zsh-autosuggestions, zsh-syntax-highlighting)
+  lineinfile:
+    path: "{{ ansible_user_dir }}/.zshrc"
+    regexp: '^plugins=\('
+    line: 'plugins=(git docker zsh-autosuggestions zsh-syntax-highlighting)'
+  become_user: "{{ ansible_user_id }}"
 
-  #   - name: Configure Oh My Zsh plugins (e.g., git, docker, zsh-autosuggestions, zsh-syntax-highlighting)
-  #     lineinfile:
-  #       path: "{{ ansible_user_dir }}/.zshrc"
-  #       regexp: '^plugins=\('
-  #       line: 'plugins=(git docker zsh-autosuggestions zsh-syntax-highlighting)'
-  #     become_user: "{{ ansible_user_id }}"
+- name: Install zsh-autosuggestions
+  git:
+    repo: https://github.com/zsh-users/zsh-autosuggestions.git
+    dest: "{{ ansible_user_dir }}/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
+  become_user: "{{ ansible_user_id }}"
 
-  #   - name: Install zsh-autosuggestions
-  #     git:
-  #       repo: https://github.com/zsh-users/zsh-autosuggestions.git
-  #       dest: "{{ ansible_user_dir }}/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
-  #     become_user: "{{ ansible_user_id }}"
+- name: Install zsh-syntax-highlighting
+  git:
+    repo: https://github.com/zsh-users/zsh-syntax-highlighting.git
+    dest: "{{ ansible_user_dir }}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
+  become_user: "{{ ansible_user_id }}"
 
-  #   - name: Install zsh-syntax-highlighting
-  #     git:
-  #       repo: https://github.com/zsh-users/zsh-syntax-highlighting.git
-  #       dest: "{{ ansible_user_dir }}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
-  #     become_user: "{{ ansible_user_id }}"
+- name: Source .zshrc to apply changes immediately (optional, requires new terminal to be fully applied)
+  shell: source ~/.zshrc
+  become_user: "{{ ansible_user_id }}"
+  changed_when: false #This task should not report as changed every time.
 
-  #   - name: Source .zshrc to apply changes immediately (optional, requires new terminal to be fully applied)
-  #     shell: source ~/.zshrc
-  #     become_user: "{{ ansible_user_id }}"
-  #     changed_when: false #This task should not report as changed every time.
-
-  # vars:
-  #   ansible_user_id: "{{ ansible_user | default(ansible_user_id) }}" # Use passed user or default
-  #   ansible_user_dir: "{{ ansible_user_dir | default('/home/' + ansible_user_id) }}" # use passed home dir or default.
+  vars:
+    ansible_user_id: "{{ ansible_user | default(ansible_user_id) }}" # Use passed user or default
+    ansible_user_dir: "{{ ansible_user_dir | default('/home/' + ansible_user_id) }}" # use passed home dir or default.

@@ -1,18 +1,22 @@
 ---
 - hosts: all
   remote_user: root
-  become: true
-  roles:
-    - role: diodonfrost.jetbrains_toolbox
-      vars:
-        jetbrains_toolbox_version: "latest"  
-        jetbrains_tools_to_install: ["pycharm-community"]
+
+  # roles:
+  #   - role: diodonfrost.jetbrains_toolbox
+  #     become: true
+  #     vars:
+  #       jetbrains_toolbox_version: "latest"  
+  #       jetbrains_tools_to_install: ["pycharm-community"]
         
   tasks:
-    - include_tasks: roles/packages/tasks/main.yml
-      tags: packages
-    - include_tasks: roles/zsh/tasks/main.yml
-      tags: zsh
+  #   - include_tasks: roles/packages/tasks/main.yml
+  #     tags: packages
+  # #   # Include tasks for configuring Zsh shell
+  #   - include_tasks: roles/zsh/tasks/main.yml
+  #     tags: zsh
+    - include_tasks: roles/thinkfan/tasks/main.yml
+      tags: thinkfan
           
         
         
