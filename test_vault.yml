@@ -1,0 +1,5 @@
+---
+# This is a test unencrypted vault file
+secret_password: "this_should_not_be_committed"
+api_key: "super_secret_key_123"
+database_password: "admin123"
