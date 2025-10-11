@@ -127,3 +127,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Ansible vault password files
+.ansible_vault_pass
+*vault_pass*
