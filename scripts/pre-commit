@@ -1,0 +1,101 @@
+#!/bin/bash
+
+# Pre-commit hook to prevent committing unencrypted Ansible vault files
+# This hook checks for files that look like vault files but are not encrypted
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Function to check if a file is encrypted with ansible-vault
+is_vault_encrypted() {
+    local file="$1"
+    if [[ -f "$file" ]]; then
+        # Check if file starts with $ANSIBLE_VAULT
+        if head -n 1 "$file" | grep -q '^\$ANSIBLE_VAULT;'; then
+            return 0  # File is encrypted
+        else
+            return 1  # File is not encrypted
+        fi
+    fi
+    return 1
+}
+
+# Function to check if file contains sensitive patterns
+contains_sensitive_data() {
+    local file="$1"
+    # Common patterns that indicate sensitive data
+    local sensitive_patterns=(
+        "password:"
+        "passwd:"
+        "secret:"
+        "key:"
+        "token:"
+        "api_key:"
+        "private_key:"
+        "credential:"
+        "auth:"
+    )
+    
+    for pattern in "${sensitive_patterns[@]}"; do
+        if grep -qi "$pattern" "$file" 2>/dev/null; then
+            return 0  # Contains sensitive data
+        fi
+    done
+    return 1
+}
+
+# Get list of files to be committed
+files_to_commit=$(git diff --cached --name-only --diff-filter=ACM)
+
+# Track if we found any issues
+found_issues=false
+
+echo -e "${GREEN}Checking for unencrypted vault files...${NC}"
+
+# Check each file being committed
+for file in $files_to_commit; do
+    # Skip if file doesn't exist (might be deleted)
+    [[ ! -f "$file" ]] && continue
+    
+    # Check files that might be vault files based on naming patterns
+    if [[ "$file" =~ (vault|secret|credential|password|key).*\.ya?ml$ ]] || 
+       [[ "$file" == "vault.yml" ]] || 
+       [[ "$file" == "secrets.yml" ]] ||
+       [[ "$file" =~ group_vars/.*/vault.*\.ya?ml$ ]] ||
+       [[ "$file" =~ host_vars/.*/vault.*\.ya?ml$ ]]; then
+        
+        if ! is_vault_encrypted "$file"; then
+            echo -e "${RED}ERROR: Unencrypted vault file detected: $file${NC}"
+            echo -e "${YELLOW}This file appears to be a vault file but is not encrypted.${NC}"
+            echo -e "${YELLOW}Please encrypt it with: ansible-vault encrypt $file${NC}"
+            found_issues=true
+        else
+            echo -e "${GREEN}✓ $file is properly encrypted${NC}"
+        fi
+    # Also check any YAML file that contains sensitive-looking data
+    elif [[ "$file" =~ \.ya?ml$ ]]; then
+        if contains_sensitive_data "$file" && ! is_vault_encrypted "$file"; then
+            echo -e "${YELLOW}WARNING: $file contains sensitive data but is not encrypted${NC}"
+            echo -e "${YELLOW}Consider encrypting it with: ansible-vault encrypt $file${NC}"
+            echo -e "${YELLOW}Or move sensitive data to a vault file${NC}"
+            # This is a warning, not an error, so we don't set found_issues=true
+        fi
+    fi
+done
+
+if $found_issues; then
+    echo -e "\n${RED}Commit blocked due to unencrypted vault files!${NC}"
+    echo -e "${YELLOW}To fix this:${NC}"
+    echo -e "${YELLOW}1. Encrypt the files with: ansible-vault encrypt <filename>${NC}"
+    echo -e "${YELLOW}2. Or if they shouldn't be vault files, rename them to not match vault patterns${NC}"
+    echo -e "${YELLOW}3. Then commit again${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✓ All vault files are properly encrypted${NC}"
+exit 0
