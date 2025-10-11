@@ -1,0 +1,32 @@
+---
+# Default variables for package-install role
+
+# Standard packages to install on PopOS 24.04 Cosmic
+standard_packages:
+  - anacron
+  - autojump
+  - btop
+  - dconf-editor
+  - fzf
+  - hardinfo
+  - htop
+  - inxi
+  - kitty
+  - lm-sensors
+  - restic
+  - ripgrep
+  - silversearcher-ag
+  - snapd
+  - solaar
+  - stress
+  - thefuck
+  - tmux
+  - tree
+  - ubuntu-restricted-extras
+  - vim
+  - yubikey-manager
+
+# Package installation options
+package_state: present
+update_cache: yes
+cache_valid_time: 3600

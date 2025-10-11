@@ -1,0 +1,14 @@
+---
+# Handlers for package-install role
+
+- name: refresh package cache
+  apt:
+    update_cache: yes
+  listen: "refresh cache"
+
+- name: verify package installation
+  command: dpkg -l {{ item }}
+  register: package_check
+  failed_when: package_check.rc != 0
+  changed_when: false
+  listen: "verify packages"

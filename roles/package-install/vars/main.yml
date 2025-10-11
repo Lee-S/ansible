@@ -1,0 +1,17 @@
+---
+# Variables for package-install role
+
+# These variables are used internally by the role
+# and should not typically be overridden
+
+# Package manager specific settings
+apt_cache_timeout: 3600
+package_manager: apt
+
+# Verification packages - critical packages to verify after installation
+critical_packages:
+  - htop
+  - btop
+  - vim
+  - tmux
+  - tree

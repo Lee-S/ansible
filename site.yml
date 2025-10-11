@@ -9,3 +9,4 @@
   roles:
     - git-setup
     - nas-mount
+    - package-install
