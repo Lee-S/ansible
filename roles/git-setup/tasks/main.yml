@@ -1,0 +1,111 @@
+---
+# Main tasks for git-setup role
+
+- name: Install Git package
+  package:
+    name: "{{ required_packages }}"
+    state: present
+  tags:
+    - packages
+    - git-setup
+
+- name: Get the actual user (not root)
+  shell: |
+    if [ "$SUDO_USER" ]; then
+      echo $SUDO_USER
+    else
+      echo "{{ ansible_user | default(ansible_env.USER) }}"
+    fi
+  register: actual_user
+  changed_when: false
+  tags:
+    - user-info
+    - git-setup
+
+- name: Get the actual user's home directory
+  shell: |
+    if [ "$SUDO_USER" ]; then
+      getent passwd $SUDO_USER | cut -d: -f6
+    else
+      echo "$HOME"
+    fi
+  register: actual_user_home
+  changed_when: false
+  tags:
+    - user-info
+    - git-setup
+
+- name: Set user facts
+  set_fact:
+    git_target_user: "{{ actual_user.stdout }}"
+    git_target_home: "{{ actual_user_home.stdout }}"
+  tags:
+    - user-info
+    - git-setup
+
+- name: Check if Git is already configured
+  command: git config --global user.name
+  register: git_current_name
+  failed_when: false
+  changed_when: false
+  become: yes
+  become_user: "{{ git_target_user }}"
+  tags:
+    - git-check
+    - git-setup
+
+- name: Check if Git email is already configured
+  command: git config --global user.email
+  register: git_current_email
+  failed_when: false
+  changed_when: false
+  become: yes
+  become_user: "{{ git_target_user }}"
+  tags:
+    - git-check
+    - git-setup
+
+- name: Display current Git configuration
+  debug:
+    msg: |
+      Current Git configuration:
+      - User name: {{ git_current_name.stdout | default('Not configured') }}
+      - User email: {{ git_current_email.stdout | default('Not configured') }}
+      
+      Will configure:
+      - User name: {{ git_user_name }}
+      - User email: {{ git_user_email }}
+  tags:
+    - git-info
+    - git-setup
+
+- name: Configure Git global settings
+  git_config:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    scope: global
+  loop: "{{ git_config_options }}"
+  become: yes
+  become_user: "{{ git_target_user }}"
+  tags:
+    - git-config
+    - git-setup
+
+- name: Verify Git configuration
+  command: git config --global --list
+  register: git_final_config
+  changed_when: false
+  become: yes
+  become_user: "{{ git_target_user }}"
+  tags:
+    - git-verify
+    - git-setup
+
+- name: Display final Git configuration
+  debug:
+    msg: |
+      Git configuration completed successfully:
+      {{ git_final_config.stdout }}
+  tags:
+    - git-info
+    - git-setup

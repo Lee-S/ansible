@@ -1,0 +1,5 @@
+---
+# Role-specific variables for git-setup
+# These variables have higher precedence than defaults
+
+# No derived variables needed - Git configuration is handled directly in tasks

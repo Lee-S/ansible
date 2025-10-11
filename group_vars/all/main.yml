@@ -1,0 +1,7 @@
+---
+# Main variables for all hosts
+# Vault variables are loaded from vault.yml when needed
+
+# Git configuration
+git_user_name: "Lee-S"
+git_user_email: "lee.skelton@gmail.com"

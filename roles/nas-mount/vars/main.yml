@@ -1,0 +1,5 @@
+---
+# Role-specific variables for nas-mount
+# These variables have higher precedence than defaults
+
+# No derived variables needed - mount paths are constructed directly in tasks

@@ -1,0 +1,11 @@
+---
+- name: Home Lab Setup - Stage 1
+  hosts: local
+  become: yes
+  gather_facts: yes
+  vars_files:
+    - vault.yml
+  
+  roles:
+    - git-setup
+    - nas-mount

@@ -1,0 +1,18 @@
+---
+# Default variables for nas-mount role
+nas_server: nas.local
+nas_fs_type: cifs
+nas_credentials_file: /etc/cifs-credentials
+
+# List of NAS mounts to configure
+nas_mounts:
+  - share: personal_folder
+    mount_point: lee
+  - share: share
+    mount_point: share
+  - share: backups
+    mount_point: backups
+
+# Package requirements
+required_packages:
+  - cifs-utils

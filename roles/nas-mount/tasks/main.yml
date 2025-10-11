@@ -1,0 +1,137 @@
+---
+# Main tasks for nas-mount role
+
+- name: Get the actual user's UID and GID (not root)
+  shell: |
+    if [ "$SUDO_USER" ]; then
+      id -u $SUDO_USER
+    else
+      echo "1000"
+    fi
+  register: actual_user_uid
+  changed_when: false
+  tags:
+    - user-info
+    - nas-mount
+
+- name: Get the actual user's GID (not root)
+  shell: |
+    if [ "$SUDO_USER" ]; then
+      id -g $SUDO_USER
+    else
+      echo "1000"
+    fi
+  register: actual_user_gid
+  changed_when: false
+  tags:
+    - user-info
+    - nas-mount
+
+- name: Set user UID and GID facts
+  set_fact:
+    ansible_user_uid: "{{ actual_user_uid.stdout }}"
+    ansible_user_gid: "{{ actual_user_gid.stdout }}"
+  tags:
+    - user-info
+    - nas-mount
+
+- name: Install required packages for CIFS mounting
+  package:
+    name: "{{ required_packages }}"
+    state: present
+  tags:
+    - packages
+    - nas-mount
+
+- name: Create parent directories for mount points
+  file:
+    path: "/mnt/nas"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  tags:
+    - directories
+    - nas-mount
+
+- name: Create mount point directories
+  file:
+    path: "/mnt/nas/{{ item.mount_point }}"
+    state: directory
+    mode: '0755'
+    owner: "{{ ansible_user_uid }}"
+    group: "{{ ansible_user_gid }}"
+  loop: "{{ nas_mounts }}"
+  tags:
+    - directories
+    - nas-mount
+
+- name: Create CIFS credentials file
+  template:
+    src: cifs-credentials.j2
+    dest: "{{ nas_credentials_file }}"
+    mode: '0600'
+    owner: root
+    group: root
+  notify: remount nas share
+  tags:
+    - credentials
+    - nas-mount
+
+- name: Test NAS connectivity
+  command: ping -c 1 {{ nas_server }}
+  register: nas_ping_result
+  failed_when: nas_ping_result.rc != 0
+  changed_when: false
+  tags:
+    - connectivity
+    - nas-mount
+
+- name: Check if shares are already mounted
+  command: mountpoint -q /mnt/nas/{{ item.mount_point }}
+  register: mount_check
+  failed_when: false
+  changed_when: false
+  loop: "{{ nas_mounts }}"
+  tags:
+    - mount-check
+    - nas-mount
+
+- name: Add NAS shares to fstab and mount them
+  mount:
+    path: "/mnt/nas/{{ item.mount_point }}"
+    src: "//{{ nas_server }}/{{ item.share }}"
+    fstype: "{{ nas_fs_type }}"
+    opts: "defaults,_netdev,credentials={{ nas_credentials_file }},uid={{ ansible_user_uid }},gid={{ ansible_user_gid }},file_mode=0644,dir_mode=0755,iocharset=utf8"
+    state: mounted
+  loop: "{{ nas_mounts }}"
+  register: mount_result
+  tags:
+    - fstab
+    - mount
+    - nas-mount
+
+
+- name: Verify mounts are accessible
+  stat:
+    path: "/mnt/nas/{{ item.mount_point }}"
+  register: mount_stats
+  failed_when: not mount_stats.stat.exists
+  loop: "{{ nas_mounts }}"
+  tags:
+    - verification
+    - nas-mount
+
+- name: Display mount information
+  debug:
+    msg: |
+      NAS mount successful:
+      - Server: {{ nas_server }}
+      - Share: {{ item.item.share }}
+      - Mount Point: /mnt/nas/{{ item.item.mount_point }}
+      - File System: {{ nas_fs_type }}
+      - Mount accessible: {{ item.stat.exists }}
+  loop: "{{ mount_stats.results }}"
+  tags:
+    - info
+    - nas-mount

@@ -1,0 +1,20 @@
+---
+# Handlers for nas-mount role
+
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: remount nas shares
+  mount:
+    path: "/mnt/nas/{{ item.mount_point }}"
+    state: remounted
+  loop: "{{ nas_mounts }}"
+  listen: "remount nas share"
+
+- name: unmount nas shares
+  mount:
+    path: "/mnt/nas/{{ item.mount_point }}"
+    state: unmounted
+  loop: "{{ nas_mounts }}"
+  listen: "unmount nas share"
