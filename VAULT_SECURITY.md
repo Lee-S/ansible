@@ -2,9 +2,9 @@
 
 This document outlines the security measures implemented to prevent accidentally committing unencrypted vault files to version control.
 
-## Quick Setup for Team Members
+## Quick Setup for new chckouts
 
-**New team members should run this first:**
+**After checkout you should run this first:**
 ```bash
 ./scripts/install-hooks.sh
 ```
@@ -27,12 +27,12 @@ A Git pre-commit hook (`.git/hooks/pre-commit`) automatically checks all files b
 
 ### 2. Ansible Configuration
 The `ansible.cfg` file is configured with:
-- `vault_password_file = .vault_pass` - Points to password file (excluded from git)
+- `vault_password_file = .ansible_vault_pass` - Points to password file (excluded from git)
 - `ask_vault_pass = True` - Prompts for password if file doesn't exist
 
 ### 3. .gitignore Protection
 The `.gitignore` file excludes:
-- `.vault_pass` - Vault password file
+- `.ansible_vault_pass` - Vault password file
 - `vault_password_file` - Alternative password file names
 - `**/vault_password*` - Any vault password files
 
@@ -60,11 +60,11 @@ ansible-vault view vault.yml
 ### Managing Vault Passwords
 ```bash
 # Create a vault password file (DO NOT commit this)
-echo "your_vault_password" > .vault_pass
-chmod 600 .vault_pass
+echo "your_vault_password" > .ansible_vault_pass
+chmod 600 .ansible_vault_pass
 
 # Or use environment variable
-export ANSIBLE_VAULT_PASSWORD_FILE=.vault_pass
+export ANSIBLE_VAULT_PASSWORD_FILE=.ansible_vault_pass
 ```
 
 ### Decrypting for Editing (Temporary)
