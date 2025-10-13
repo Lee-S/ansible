@@ -12,6 +12,8 @@ nas_mounts:
     mount_point: share
   - share: backups
     mount_point: backups
+  - share: lee_data
+    mount_point: lee_data
 
 # Package requirements
 required_packages:
