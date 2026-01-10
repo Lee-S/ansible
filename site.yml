@@ -10,3 +10,5 @@
     - git-setup
     - nas-mount
     - package-install
+    - nas-backup
+    - nas-sync

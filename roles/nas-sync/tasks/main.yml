@@ -1,0 +1,71 @@
+---
+# Main tasks for nas-sync role (lsyncd real-time sync)
+
+# Include nas-mount role as dependency
+- name: Include nas-mount role
+  include_role:
+    name: nas-mount
+  tags:
+    - nas-sync
+
+# Get user information
+- name: Get the actual username (not root)
+  shell: |
+    if [ "$SUDO_USER" ]; then
+      echo $SUDO_USER
+    else
+      echo "lee"
+    fi
+  register: actual_username
+  changed_when: false
+  tags:
+    - nas-sync
+
+- name: Set backup_user fact
+  set_fact:
+    backup_user: "{{ actual_username.stdout }}"
+  tags:
+    - nas-sync
+
+# Generate machine ID
+- name: Get hostname
+  command: hostname
+  register: hostname_result
+  changed_when: false
+  tags:
+    - nas-sync
+
+- name: Get hardware model
+  shell: |
+    hostnamectl | grep "Hardware Model" | cut -d: -f2 | tr ' ' '_' | tr '[:upper:]' '[:lower:]' | sed 's/^_//' || echo "unknown"
+  register: hardware_result
+  changed_when: false
+  tags:
+    - nas-sync
+
+- name: Set machine_id fact
+  set_fact:
+    machine_id: "{{ backup_user }}-{{ hostname_result.stdout }}-{{ hardware_result.stdout | default('unknown') }}"
+  tags:
+    - nas-sync
+
+- name: Display machine ID
+  debug:
+    msg: "Machine ID: {{ machine_id }}"
+  tags:
+    - nas-sync
+
+# Create sync directories on NAS
+- name: Create sync directory structure on NAS
+  file:
+    path: "{{ nas_sync_base }}/{{ machine_id }}/sync"
+    state: directory
+    mode: '0755'
+  tags:
+    - nas-sync
+
+# Include lsyncd tasks
+- name: Include lsyncd sync tasks
+  include_tasks: lsyncd.yml
+  tags:
+    - nas-sync

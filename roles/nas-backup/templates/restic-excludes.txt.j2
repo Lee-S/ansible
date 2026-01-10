@@ -1,0 +1,5 @@
+# Restic backup exclusions
+# Managed by Ansible - do not edit manually
+{% for exclude in backup_excludes %}
+{{ exclude }}
+{% endfor %}

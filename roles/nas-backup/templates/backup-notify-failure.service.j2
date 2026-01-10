@@ -1,0 +1,6 @@
+[Unit]
+Description=Backup failure notification for %i
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c 'echo "Backup service %i failed on {{ machine_id }} at $(date). Check journalctl -u %i for details." | mail -s "BACKUP FAILED: %i on {{ machine_id }}" {{ notify_email }}'

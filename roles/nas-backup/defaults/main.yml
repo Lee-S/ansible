@@ -1,0 +1,45 @@
+---
+# Default variables for nas-backup role
+
+# User settings (detected automatically, can override)
+backup_user: "{{ ansible_env.SUDO_USER | default('lee') }}"
+
+# Backup schedule (systemd calendar format)
+backup_schedule: "*-*-* 02:00:00"  # Daily at 2 AM
+
+# Retention policy
+backup_retention_daily: 3
+backup_retention_monthly: 3
+
+# Paths
+nas_backup_base: /mnt/nas/backups
+
+# Backup exclusions
+backup_excludes:
+  - .cache
+  - .local/share/Trash
+  - node_modules
+  - .venv
+  - venv
+  - __pycache__
+  - "*.pyc"
+  - .npm
+  - .cargo/registry
+  - .rustup
+  - target/
+  - build/
+  - dist/
+  - .git/objects
+  - "*.log"
+  - .thumbnails
+  - .dtrash
+
+# Notification settings (override in vault)
+notify_email: ""
+smtp_host: "smtp-relay.brevo.com"
+smtp_port: 587
+smtp_user: ""
+smtp_password: ""
+
+# Restic password (set in vault)
+restic_password: ""

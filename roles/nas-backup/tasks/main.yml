@@ -1,0 +1,81 @@
+---
+# Main tasks for nas-backup role
+
+# Include nas-mount role as dependency
+- name: Include nas-mount role
+  include_role:
+    name: nas-mount
+  tags:
+    - nas-backup
+
+# Get user information
+- name: Get the actual username (not root)
+  shell: |
+    if [ "$SUDO_USER" ]; then
+      echo $SUDO_USER
+    else
+      echo "lee"
+    fi
+  register: actual_username
+  changed_when: false
+  tags:
+    - nas-backup
+
+- name: Set backup_user fact
+  set_fact:
+    backup_user: "{{ actual_username.stdout }}"
+  tags:
+    - nas-backup
+
+# Generate machine ID
+- name: Get hostname
+  command: hostname
+  register: hostname_result
+  changed_when: false
+  tags:
+    - nas-backup
+
+- name: Get hardware model
+  shell: |
+    hostnamectl | grep "Hardware Model" | cut -d: -f2 | tr ' ' '_' | tr '[:upper:]' '[:lower:]' | sed 's/^_//' || echo "unknown"
+  register: hardware_result
+  changed_when: false
+  tags:
+    - nas-backup
+
+- name: Set machine_id fact
+  set_fact:
+    machine_id: "{{ backup_user }}-{{ hostname_result.stdout }}-{{ hardware_result.stdout | default('unknown') }}"
+  tags:
+    - nas-backup
+
+- name: Display machine ID
+  debug:
+    msg: "Machine ID: {{ machine_id }}"
+  tags:
+    - nas-backup
+
+# Create backup directories on NAS
+- name: Create backup directory structure on NAS
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ nas_backup_base }}/{{ machine_id }}"
+    - "{{ nas_backup_base }}/{{ machine_id }}/restic-repo"
+  tags:
+    - nas-backup
+
+# Include component tasks
+- name: Include restic backup tasks
+  include_tasks: restic.yml
+  tags:
+    - nas-backup
+
+- name: Include notification tasks
+  include_tasks: notifications.yml
+  when: notify_email | length > 0
+  tags:
+    - nas-backup
+    - nas-backup-notifications

@@ -1,0 +1,20 @@
+# msmtp configuration
+# Managed by Ansible - do not edit manually
+
+# Default settings
+defaults
+auth           on
+tls            on
+tls_trust_file /etc/ssl/certs/ca-certificates.crt
+logfile        /var/log/msmtp.log
+
+# Brevo SMTP account
+account        brevo
+host           {{ smtp_host }}
+port           {{ smtp_port }}
+from           {{ smtp_user }}
+user           {{ smtp_user }}
+password       {{ smtp_password }}
+
+# Set default account
+account default : brevo

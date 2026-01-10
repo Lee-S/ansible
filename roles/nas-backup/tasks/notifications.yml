@@ -1,0 +1,63 @@
+---
+# Email notification setup tasks (msmtp)
+
+- name: Install msmtp packages
+  package:
+    name:
+      - msmtp
+      - msmtp-mta
+    state: present
+  tags:
+    - nas-backup
+    - nas-backup-notifications
+
+- name: Create msmtp configuration
+  template:
+    src: msmtprc.j2
+    dest: /etc/msmtprc
+    mode: '0600'
+    owner: root
+    group: root
+  tags:
+    - nas-backup
+    - nas-backup-notifications
+
+- name: Create mail aliases file
+  copy:
+    content: |
+      root: {{ notify_email }}
+      default: {{ notify_email }}
+    dest: /etc/aliases
+    mode: '0644'
+  tags:
+    - nas-backup
+    - nas-backup-notifications
+
+- name: Create backup failure notification service
+  template:
+    src: backup-notify-failure.service.j2
+    dest: /etc/systemd/system/backup-notify-failure@.service
+    mode: '0644'
+  notify:
+    - reload systemd
+  tags:
+    - nas-backup
+    - nas-backup-notifications
+
+- name: Test email configuration
+  shell: |
+    echo "Test email from {{ machine_id }} - nas-backup role configured successfully" | \
+    mail -s "nas-backup test from {{ machine_id }}" {{ notify_email }}
+  register: email_test
+  changed_when: false
+  failed_when: false
+  tags:
+    - nas-backup
+    - nas-backup-notifications
+
+- name: Display email test result
+  debug:
+    msg: "{{ 'Backup notification email test sent successfully' if email_test.rc == 0 else 'Email test failed - check msmtp configuration' }}"
+  tags:
+    - nas-backup
+    - nas-backup-notifications

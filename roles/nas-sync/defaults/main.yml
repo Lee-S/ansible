@@ -1,0 +1,25 @@
+---
+# Default variables for nas-sync role (lsyncd real-time sync)
+
+# User settings (detected automatically, can override)
+backup_user: "{{ ansible_env.SUDO_USER | default('lee') }}"
+
+# Paths
+nas_sync_base: /mnt/nas/backups
+
+# Sync settings
+sync_directories:
+  - Documents
+  - Pictures
+  - repos
+sync_delay: 10  # seconds between file change and sync
+
+# Sync exclusions
+sync_excludes:
+  - .git
+  - node_modules
+  - .venv
+  - __pycache__
+  - venv
+  - tmp
+  - .dtrash

@@ -1,0 +1,99 @@
+---
+# lsyncd real-time sync setup tasks
+
+- name: Install lsyncd and rsync
+  package:
+    name:
+      - lsyncd
+      - rsync
+    state: present
+  tags:
+    - nas-sync
+
+- name: Create lsyncd config directory
+  file:
+    path: /etc/lsyncd
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  tags:
+    - nas-sync
+
+- name: Create lsyncd log directory
+  file:
+    path: /var/log/lsyncd
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  tags:
+    - nas-sync
+
+- name: Create lsyncd state directory
+  file:
+    path: /var/lib/lsyncd
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  tags:
+    - nas-sync
+
+- name: Create sync target directories on NAS
+  file:
+    path: "{{ nas_sync_base }}/{{ machine_id }}/sync/{{ item }}"
+    state: directory
+    mode: '0755'
+  loop: "{{ sync_directories }}"
+  tags:
+    - nas-sync
+
+- name: Create lsyncd configuration
+  template:
+    src: lsyncd.conf.lua.j2
+    dest: /etc/lsyncd/lsyncd.conf.lua
+    mode: '0644'
+    owner: root
+    group: root
+  notify:
+    - restart lsyncd
+  tags:
+    - nas-sync
+
+- name: Check if initial sync has been completed
+  stat:
+    path: "/var/lib/lsyncd/.initial_sync_done"
+  register: initial_sync_stamp
+  tags:
+    - nas-sync
+
+- name: Perform initial sync for each directory
+  shell: |
+    rsync -av --delete \
+      {% for exclude in sync_excludes %}--exclude='{{ exclude }}' {% endfor %} \
+      /home/{{ backup_user }}/{{ item }}/ \
+      {{ nas_sync_base }}/{{ machine_id }}/sync/{{ item }}/
+  loop: "{{ sync_directories }}"
+  when: not initial_sync_stamp.stat.exists
+  register: initial_sync
+  changed_when: "'total size is' in initial_sync.stdout"
+  tags:
+    - nas-sync
+
+- name: Create stamp file to mark initial sync complete
+  file:
+    path: "/var/lib/lsyncd/.initial_sync_done"
+    state: touch
+    mode: '0644'
+  when: not initial_sync_stamp.stat.exists
+  tags:
+    - nas-sync
+
+- name: Enable and start lsyncd service
+  systemd:
+    name: lsyncd
+    enabled: yes
+    state: started
+  tags:
+    - nas-sync

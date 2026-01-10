@@ -1,0 +1,30 @@
+-- lsyncd configuration
+-- Managed by Ansible - do not edit manually
+
+settings {
+    logfile = "/var/log/lsyncd/lsyncd.log",
+    statusFile = "/var/log/lsyncd/lsyncd.status",
+    statusInterval = 20,
+    nodaemon = false,
+}
+
+{% for dir in sync_directories %}
+sync {
+    default.rsync,
+    source = "/home/{{ backup_user }}/{{ dir }}",
+    target = "{{ nas_sync_base }}/{{ machine_id }}/sync/{{ dir }}",
+    delay = {{ sync_delay }},
+    rsync = {
+        binary = "/usr/bin/rsync",
+        archive = true,
+        compress = false,
+        verbose = true,
+    },
+    exclude = {
+{% for exclude in sync_excludes %}
+        "{{ exclude }}",
+{% endfor %}
+    },
+}
+
+{% endfor %}

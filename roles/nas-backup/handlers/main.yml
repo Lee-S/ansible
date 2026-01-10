@@ -1,0 +1,12 @@
+---
+# Handlers for nas-backup role
+
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: restart restic-backup timer
+  systemd:
+    name: restic-backup.timer
+    state: restarted
+    enabled: yes

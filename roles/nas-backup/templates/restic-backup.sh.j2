@@ -1,0 +1,51 @@
+#!/bin/bash
+# Restic backup script
+# Managed by Ansible - do not edit manually
+
+set -euo pipefail
+
+# Load configuration
+source /etc/restic/backup.env
+
+# Logging
+LOG_TAG="restic-backup"
+log() {
+    logger -t "$LOG_TAG" "$1"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') $1"
+}
+
+log "Starting backup for user ${BACKUP_USER} on machine ${MACHINE_ID}"
+
+# Check if NAS is accessible
+if [ ! -d "${RESTIC_REPOSITORY}" ]; then
+    log "ERROR: Repository not accessible at ${RESTIC_REPOSITORY}"
+    exit 1
+fi
+
+# Run backup
+log "Running restic backup..."
+restic backup /home/${BACKUP_USER} \
+    --exclude-file=/etc/restic/excludes.txt \
+    --tag scheduled \
+    --tag "${MACHINE_ID}" \
+    --verbose
+
+log "Backup completed successfully"
+
+# Prune old backups
+log "Pruning old backups..."
+restic forget \
+    --keep-daily {{ backup_retention_daily }} \
+    --keep-monthly {{ backup_retention_monthly }} \
+    --prune
+
+log "Pruning completed"
+
+# Check repository health (weekly - on Sundays)
+if [ "$(date +%u)" -eq 7 ]; then
+    log "Running weekly repository health check..."
+    restic check
+    log "Health check completed"
+fi
+
+log "Backup job finished successfully"

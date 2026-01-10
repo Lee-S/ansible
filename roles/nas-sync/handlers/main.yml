@@ -1,0 +1,12 @@
+---
+# Handlers for nas-sync role
+
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: restart lsyncd
+  systemd:
+    name: lsyncd
+    state: restarted
+    enabled: yes
