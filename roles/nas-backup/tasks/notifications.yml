@@ -1,6 +1,48 @@
 ---
 # Email notification setup tasks (msmtp)
 
+# Generate machine_id if not already set (needed when running only this task file)
+- name: Get hostname
+  command: hostname
+  register: hostname_result
+  changed_when: false
+  when: machine_id is undefined
+  tags:
+    - nas-backup
+    - nas-backup-notifications
+
+- name: Get hardware model
+  shell: |
+    hostnamectl | grep "Hardware Model" | cut -d: -f2 | tr ' ' '_' | tr '[:upper:]' '[:lower:]' | sed 's/^_//' || echo "unknown"
+  register: hardware_result
+  changed_when: false
+  when: machine_id is undefined
+  tags:
+    - nas-backup
+    - nas-backup-notifications
+
+- name: Get actual username
+  shell: |
+    if [ "$SUDO_USER" ]; then
+      echo $SUDO_USER
+    else
+      echo "lee"
+    fi
+  register: actual_username
+  changed_when: false
+  when: machine_id is undefined
+  tags:
+    - nas-backup
+    - nas-backup-notifications
+
+- name: Set machine_id fact if not defined
+  set_fact:
+    machine_id: "{{ actual_username.stdout }}-{{ hostname_result.stdout }}-{{ hardware_result.stdout | default('unknown') }}"
+  when: machine_id is undefined
+  tags:
+    - nas-backup
+    - nas-backup-notifications
+
 - name: Install msmtp packages
   package:
     name:
@@ -15,7 +57,18 @@
   template:
     src: msmtprc.j2
     dest: /etc/msmtprc
-    mode: '0600'
+    mode: '0644'
+    owner: root
+    group: root
+  tags:
+    - nas-backup
+    - nas-backup-notifications
+
+- name: Create msmtp log file with writable permissions
+  file:
+    path: /var/log/msmtp.log
+    state: touch
+    mode: '0666'
     owner: root
     group: root
   tags:
@@ -46,8 +99,12 @@
 
 - name: Test email configuration
   shell: |
-    echo "Test email from {{ machine_id }} - nas-backup role configured successfully" | \
-    mail -s "nas-backup test from {{ machine_id }}" {{ notify_email }}
+    (echo "To: {{ notify_email }}"; \
+     echo "Subject: nas-backup test from {{ machine_id }}"; \
+     echo "From: {{ smtp_from }}"; \
+     echo ""; \
+     echo "Test email from {{ machine_id }} - nas-backup role configured successfully") | \
+    msmtp {{ notify_email }}
   register: email_test
   changed_when: false
   failed_when: false

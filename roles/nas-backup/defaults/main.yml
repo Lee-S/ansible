@@ -40,6 +40,7 @@ smtp_host: "smtp-relay.brevo.com"
 smtp_port: 587
 smtp_user: ""
 smtp_password: ""
+smtp_from: "{{ notify_email }}"  # Sender address (must be verified in Brevo)
 
 # Restic password (set in vault)
 restic_password: ""
