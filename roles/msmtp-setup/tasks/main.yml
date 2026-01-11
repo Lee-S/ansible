@@ -1,0 +1,72 @@
+---
+# Main tasks for msmtp-setup role
+# Sets up msmtp mail transfer agent for sending email notifications
+
+- name: Install msmtp packages
+  package:
+    name:
+      - msmtp
+      - msmtp-mta
+    state: present
+  tags:
+    - msmtp-setup
+
+- name: Create msmtp configuration
+  template:
+    src: msmtprc.j2
+    dest: /etc/msmtprc
+    mode: '0644'
+    owner: root
+    group: root
+  tags:
+    - msmtp-setup
+
+- name: Create msmtp log file with writable permissions
+  file:
+    path: /var/log/msmtp.log
+    state: touch
+    mode: '0666'
+    owner: root
+    group: root
+  tags:
+    - msmtp-setup
+
+- name: Create mail aliases file
+  copy:
+    content: |
+      root: {{ notify_email }}
+      default: {{ notify_email }}
+    dest: /etc/aliases
+    mode: '0644'
+  tags:
+    - msmtp-setup
+
+- name: Get hostname for test email
+  command: hostname
+  register: hostname_result
+  changed_when: false
+  when: send_test_email and notify_email | length > 0
+  tags:
+    - msmtp-setup
+
+- name: Test email configuration
+  shell: |
+    (echo "To: {{ notify_email }}"; \
+     echo "Subject: msmtp test from {{ hostname_result.stdout }}"; \
+     echo "From: {{ smtp_from }}"; \
+     echo ""; \
+     echo "Test email from {{ hostname_result.stdout }} - msmtp-setup role configured successfully") | \
+    msmtp {{ notify_email }}
+  register: email_test
+  changed_when: false
+  failed_when: false
+  when: send_test_email and notify_email | length > 0
+  tags:
+    - msmtp-setup
+
+- name: Display email test result
+  debug:
+    msg: "{{ 'Test email sent successfully to ' + notify_email if email_test.rc == 0 else 'Email test failed - check msmtp configuration' }}"
+  when: send_test_email and notify_email | length > 0
+  tags:
+    - msmtp-setup

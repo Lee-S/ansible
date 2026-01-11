@@ -35,12 +35,9 @@ backup_excludes:
   - .dtrash
 
 # Notification settings (override in vault)
+# Note: SMTP configuration is handled by msmtp-setup role
 notify_email: ""
-smtp_host: "smtp-relay.brevo.com"
-smtp_port: 587
-smtp_user: ""
-smtp_password: ""
-smtp_from: "{{ notify_email }}"  # Sender address (must be verified in Brevo)
+smtp_from: "{{ notify_email }}"  # Sender address for backup notifications
 
 # Restic password (set in vault)
 restic_password: ""

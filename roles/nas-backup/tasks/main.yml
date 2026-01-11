@@ -73,6 +73,15 @@
   tags:
     - nas-backup
 
+# Setup msmtp for email notifications
+- name: Include msmtp-setup role
+  include_role:
+    name: msmtp-setup
+  when: notify_email | length > 0
+  tags:
+    - nas-backup
+    - nas-backup-notifications
+
 - name: Include notification tasks
   include_tasks: notifications.yml
   when: notify_email | length > 0

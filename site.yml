@@ -10,5 +10,6 @@
     - git-setup
     - nas-mount
     - package-install
+    - msmtp-setup
     - nas-backup
     - nas-sync

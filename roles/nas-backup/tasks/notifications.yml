@@ -1,5 +1,6 @@
 ---
-# Email notification setup tasks (msmtp)
+# Backup-specific email notification setup tasks
+# Note: msmtp must be configured first (via msmtp-setup role)
 
 # Generate machine_id if not already set (needed when running only this task file)
 - name: Get hostname
@@ -43,49 +44,6 @@
     - nas-backup
     - nas-backup-notifications
 
-- name: Install msmtp packages
-  package:
-    name:
-      - msmtp
-      - msmtp-mta
-    state: present
-  tags:
-    - nas-backup
-    - nas-backup-notifications
-
-- name: Create msmtp configuration
-  template:
-    src: msmtprc.j2
-    dest: /etc/msmtprc
-    mode: '0644'
-    owner: root
-    group: root
-  tags:
-    - nas-backup
-    - nas-backup-notifications
-
-- name: Create msmtp log file with writable permissions
-  file:
-    path: /var/log/msmtp.log
-    state: touch
-    mode: '0666'
-    owner: root
-    group: root
-  tags:
-    - nas-backup
-    - nas-backup-notifications
-
-- name: Create mail aliases file
-  copy:
-    content: |
-      root: {{ notify_email }}
-      default: {{ notify_email }}
-    dest: /etc/aliases
-    mode: '0644'
-  tags:
-    - nas-backup
-    - nas-backup-notifications
-
 - name: Create backup failure notification service
   template:
     src: backup-notify-failure.service.j2
@@ -97,24 +55,24 @@
     - nas-backup
     - nas-backup-notifications
 
-- name: Test email configuration
+- name: Test backup notification email
   shell: |
     (echo "To: {{ notify_email }}"; \
-     echo "Subject: nas-backup test from {{ machine_id }}"; \
+     echo "Subject: nas-backup notification test from {{ machine_id }}"; \
      echo "From: {{ smtp_from }}"; \
      echo ""; \
-     echo "Test email from {{ machine_id }} - nas-backup role configured successfully") | \
+     echo "Backup notification test from {{ machine_id }} - nas-backup role configured successfully") | \
     msmtp {{ notify_email }}
-  register: email_test
+  register: backup_email_test
   changed_when: false
   failed_when: false
   tags:
     - nas-backup
     - nas-backup-notifications
 
-- name: Display email test result
+- name: Display backup email test result
   debug:
-    msg: "{{ 'Backup notification email test sent successfully' if email_test.rc == 0 else 'Email test failed - check msmtp configuration' }}"
+    msg: "{{ 'Backup notification email test sent successfully' if backup_email_test.rc == 0 else 'Backup email test failed - check msmtp configuration' }}"
   tags:
     - nas-backup
     - nas-backup-notifications

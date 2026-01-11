@@ -1,0 +1,15 @@
+---
+# Default variables for msmtp-setup role
+
+# Email notification settings (override in vault or group_vars)
+notify_email: ""
+
+# SMTP relay settings
+smtp_host: "smtp-relay.brevo.com"
+smtp_port: 587
+smtp_user: ""
+smtp_password: ""
+smtp_from: "{{ notify_email }}"  # Sender address (must be verified with SMTP provider)
+
+# Send test email after configuration
+send_test_email: true

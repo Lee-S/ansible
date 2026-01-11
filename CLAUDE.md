@@ -16,6 +16,8 @@ ansible-playbook site.yml
 ansible-playbook site.yml --tags "git-setup"
 ansible-playbook site.yml --tags "nas-mount"
 ansible-playbook site.yml --tags "package-install"
+ansible-playbook site.yml --tags "msmtp-setup"
+ansible-playbook site.yml --tags "nas-backup"
 
 # Check mode (dry run)
 ansible-playbook site.yml --check
@@ -34,17 +36,19 @@ ansible-vault edit vault.yml
 
 **Playbook**: `site.yml` is the main entry point, runs against `local` host group with privilege escalation.
 
-**Vault**: `vault.yml` contains encrypted secrets (NAS credentials). Password is read from `.ansible_vault_pass` file if present, otherwise prompted.
+**Vault**: `vault.yml` contains encrypted secrets (NAS credentials, SMTP credentials). Password is read from `.ansible_vault_pass` file if present, otherwise prompted.
 
 **Roles**:
 - `git-setup`: Installs git and configures global settings for the invoking user (not root)
 - `nas-mount`: Mounts CIFS/SMB shares from local NAS server, creates credentials file, configures fstab
 - `package-install`: Installs standard utility packages via apt
+- `msmtp-setup`: Configures msmtp mail transfer agent for sending email notifications (can be run independently)
+- `nas-backup`: Configures restic backups to NAS with email notifications (depends on nas-mount and msmtp-setup)
 
 **Variables**:
 - `group_vars/all/main.yml`: Common variables (git user info)
 - `roles/*/defaults/main.yml`: Role-specific defaults
-- `vault.yml`: Encrypted sensitive data (nas_username, nas_password)
+- `vault.yml`: Encrypted sensitive data (nas_username, nas_password, smtp credentials)
 
 ## Key Patterns
 
