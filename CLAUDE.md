@@ -18,6 +18,7 @@ ansible-playbook site.yml --tags "nas-mount"
 ansible-playbook site.yml --tags "package-install"
 ansible-playbook site.yml --tags "msmtp-setup"
 ansible-playbook site.yml --tags "nas-backup"
+ansible-playbook site.yml --tags "nas-sync"
 
 # Check mode (dry run)
 ansible-playbook site.yml --check
@@ -44,6 +45,7 @@ ansible-vault edit vault.yml
 - `package-install`: Installs standard utility packages via apt
 - `msmtp-setup`: Configures msmtp mail transfer agent for sending email notifications (can be run independently)
 - `nas-backup`: Configures restic backups to NAS with email notifications (depends on nas-mount and msmtp-setup)
+- `nas-sync`: Configures lsyncd for real-time synchronization of user directories (Documents, Pictures, repos) to NAS (depends on nas-mount)
 
 **Variables**:
 - `group_vars/all/main.yml`: Common variables (git user info)
