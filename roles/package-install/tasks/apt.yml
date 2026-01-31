@@ -1,0 +1,57 @@
+---
+# Main tasks for package-install role
+
+- name: Update package cache
+  apt:
+    update_cache: "{{ update_cache }}"
+  tags:
+    - packages
+    - package-install
+    - cache-update
+
+- name: Install standard packages
+  package:
+    name: "{{ standard_packages }}"
+    state: "{{ package_state }}"
+  register: package_install_result
+  tags:
+    - packages
+    - package-install
+
+- name: Display installation results
+  debug:
+    msg: |
+      Package installation completed:
+      - Total packages: {{ standard_packages | length }}
+      - Packages installed: {{ standard_packages | join(', ') }}
+      - Installation status: {{ 'Success' if package_install_result is succeeded else 'Failed' }}
+  tags:
+    - packages
+    - package-install
+    - info
+
+- name: Verify critical packages are installed
+  command: dpkg -l {{ item }}
+  register: package_verification
+  failed_when: package_verification.rc != 0
+  changed_when: false
+  loop:
+    - htop
+    - btop
+    - vim
+    - tmux
+    - tree
+  tags:
+    - packages
+    - package-install
+    - verification
+
+- name: Display verification results
+  debug:
+    msg: "Critical package {{ item.item }} is installed and available"
+  loop: "{{ package_verification.results }}"
+  when: item.rc == 0
+  tags:
+    - packages
+    - package-install
+    - info
