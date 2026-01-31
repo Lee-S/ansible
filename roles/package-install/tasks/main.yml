@@ -2,7 +2,4 @@
 # Main tasks for package-install role
 
 - name: Include OS-specific tasks
-  include_tasks: "{{ item }}"
-  with_first_found:
-    - "{{ ansible_os_family | lower }}.yml"
-    - "main.yml" # Fallback to the original main.yml if no specific file is found
+  include_tasks: "{{ ansible_os_family | lower }}.yml"

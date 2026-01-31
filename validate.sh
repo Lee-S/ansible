@@ -71,24 +71,24 @@ fi
 
 echo
 echo "5. Validating playbook syntax..."
-if [ -f "site.yml" ]; then
-    print_status 0 "site.yml exists"
+if [ -f "local_setup.yml" ]; then
+    print_status 0 "local_setup.yml exists"
     # Check if vault file is encrypted by looking for the $ANSIBLE_VAULT header
     if [ -f "vault.yml" ] && head -n1 vault.yml | grep -q "\$ANSIBLE_VAULT"; then
         # Vault is encrypted, skip syntax check in validation
         print_warning "Vault file is encrypted - skipping syntax check in validation"
-        echo "   Run manually: ansible-playbook site.yml --syntax-check --ask-vault-pass"
+        echo "   Run manually: ansible-playbook local_setup.yml --syntax-check --ask-vault-pass"
     else
         # Vault is not encrypted or doesn't exist, can do syntax check
-        if ansible-playbook site.yml --syntax-check >/dev/null 2>&1; then
+        if ansible-playbook local_setup.yml --syntax-check >/dev/null 2>&1; then
             print_status 0 "Playbook syntax is valid"
         else
             print_status 1 "Playbook syntax check failed"
-            ansible-playbook site.yml --syntax-check
+            ansible-playbook local_setup.yml --syntax-check
         fi
     fi
 else
-    print_status 1 "site.yml missing"
+    print_status 1 "local_setup.yml missing"
 fi
 
 echo
@@ -149,6 +149,6 @@ echo
 echo "Next steps:"
 echo "1. Update vault.yml with your actual NAS credentials"
 echo "2. Encrypt the vault file: ansible-vault encrypt vault.yml"
-echo "3. Run the playbook: ansible-playbook site.yml --ask-vault-pass"
+echo "3. Run the playbook: ansible-playbook local_setup.yml --ask-vault-pass"
 echo
 echo "For detailed instructions, see setup.md"

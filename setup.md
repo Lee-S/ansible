@@ -36,7 +36,7 @@ Verify your setup:
 ansible all -m ping
 
 # Check if the playbook syntax is valid
-ansible-playbook site.yml --syntax-check
+ansible-playbook local_setup.yml --syntax-check
 ```
 
 ### 3. Run the Playbook
@@ -44,10 +44,10 @@ ansible-playbook site.yml --syntax-check
 Execute the NAS mounting playbook:
 ```bash
 # Run with vault password prompt (will prompt for sudo password when needed)
-ansible-playbook site.yml --ask-vault-pass --ask-become-pass
+ansible-playbook local_setup.yml --ask-vault-pass --ask-become-pass
 
 # Or if you have a vault password file
-ansible-playbook site.yml --vault-password-file ~/.ansible_vault_pass --ask-become-pass
+ansible-playbook local_setup.yml --vault-password-file ~/.ansible_vault_pass --ask-become-pass
 ```
 
 **Note**: The playbook requires sudo privileges for mounting operations, so you'll be prompted for your sudo password during execution.

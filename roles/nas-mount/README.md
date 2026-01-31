@@ -77,7 +77,7 @@ None.
 
 3. **Run the playbook**:
    ```bash
-   ansible-playbook -i inventory/hosts site.yml --ask-vault-pass --ask-become-pass
+   ansible-playbook -i inventory/hosts local_setup.yml --ask-vault-pass --ask-become-pass
    ```
 
 ## What This Role Does
@@ -134,7 +134,7 @@ The role supports the following tags for selective execution:
 - `fstab`: Update fstab only
 - `verification`: Verify mount accessibility only
 
-Example: `ansible-playbook site.yml --tags "packages,directories"`
+Example: `ansible-playbook local_setup.yml --tags "packages,directories"`
 
 ## License
 

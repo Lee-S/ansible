@@ -1,0 +1,43 @@
+---
+- name: Create user account
+  user:
+    name: "{{ target_user }}"
+    shell: "{{ target_user_shell }}"
+    groups: "{{ target_user_groups }}"
+    append: yes
+    create_home: yes
+    state: present
+  tags:
+    - user-setup
+    - user
+
+- name: Set up .ssh directory for user
+  file:
+    path: "/home/{{ target_user }}/.ssh"
+    state: directory
+    owner: "{{ target_user }}"
+    group: "{{ target_user }}"
+    mode: '0700'
+  tags:
+    - user-setup
+    - ssh
+
+- name: Copy authorized_keys from local user
+  authorized_key:
+    user: "{{ target_user }}"
+    state: present
+    key: "{{ lookup('file', ssh_key_path) }}"
+  tags:
+    - user-setup
+    - ssh
+
+- name: Allow user to sudo without password
+  lineinfile:
+    path: /etc/sudoers.d/{{ target_user }}
+    line: "{{ target_user }} ALL=(ALL) NOPASSWD:ALL"
+    create: yes
+    mode: '0440'
+    validate: 'visudo -cf %s'
+  tags:
+    - user-setup
+    - sudo
