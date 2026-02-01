@@ -33,6 +33,11 @@ backup_excludes:
   - "*.log"
   - .thumbnails
   - .dtrash
+  - "VirtualBox VMs"
+  - Downloads
+  - "lee_local"  # Should have a separate backup strategy
+  - pCloudDrive
+
 
 # Notification settings (override in vault)
 # Note: SMTP configuration is handled by msmtp-setup role

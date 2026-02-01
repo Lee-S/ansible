@@ -16,10 +16,24 @@ sync_delay: 10  # seconds between file change and sync
 
 # Sync exclusions
 sync_excludes:
-  - .git
+  - .cache
+  - .local/share/Trash
   - node_modules
   - .venv
-  - __pycache__
   - venv
-  - tmp
+  - __pycache__
+  - "*.pyc"
+  - .npm
+  - .cargo/registry
+  - .rustup
+  - target/
+  - build/
+  - dist/
+  - .git/objects
+  - "*.log"
+  - .thumbnails
   - .dtrash
+  - "VirtualBox VMs"
+  - Downloads
+  - "lee_local"  # Should have a separate backup strategy
+  - pCloudDrive
