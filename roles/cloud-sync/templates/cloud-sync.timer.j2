@@ -1,0 +1,10 @@
+[Unit]
+Description=Cloud sync timer - runs every 6 hours
+
+[Timer]
+OnCalendar={{ sync_schedule }}
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,6 @@
+[Unit]
+Description=Cloud sync failure notification for %i
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c '(echo "To: {{ notify_email }}"; echo "Subject: CLOUD SYNC FAILED: %i on {{ machine_id }}"; echo "From: {{ smtp_from }}"; echo ""; echo "Cloud sync service %i failed on {{ machine_id }} at $(date)"; echo ""; echo "Check journalctl -u %i for details") | msmtp {{ notify_email }}'

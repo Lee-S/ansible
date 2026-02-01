@@ -3,7 +3,6 @@
 
 # CLI packages - suitable for both desktop and server
 cli_packages:
-  - anacron
   - autojump
   - btop
   - fzf
@@ -18,6 +17,8 @@ cli_packages:
   - tmux
   - tree
   - vim
+  - avahi-daemon
+
 
 # Desktop packages - GUI applications and desktop-specific tools
 desktop_packages:

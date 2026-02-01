@@ -56,6 +56,48 @@ ansible-playbook remote_setup.yml --tags "package-install" --ask-vault-pass
 ansible-playbook remote_setup.yml --check
 ```
 
+### Cloud Sync Setup (pCloud to NAS sync VM)
+```bash
+# Test SSH connectivity to cloud-sync host
+ansible cloud-sync -m ping
+
+# Run the full cloud sync setup playbook
+ansible-playbook cloud_sync_setup.yml --ask-vault-pass --ask-become-pass
+
+# Syntax check
+ansible-playbook cloud_sync_setup.yml --syntax-check
+
+# Run specific roles
+ansible-playbook cloud_sync_setup.yml --tags "git-setup" --ask-vault-pass --ask-become-pass
+ansible-playbook cloud_sync_setup.yml --tags "cloud-sync" --ask-vault-pass --ask-become-pass
+
+# Check mode (dry run)
+ansible-playbook cloud_sync_setup.yml --check
+```
+
+#### Post-Install: Authenticate rclone with pCloud
+After running the playbook, you must authenticate rclone with pCloud (OAuth required):
+```bash
+# SSH to the VM
+ssh lee@ubuntu-vm.local
+
+# Authenticate rclone with pCloud (opens URL to authenticate in browser)
+rclone config reconnect pcloud:
+
+# Test the connection
+rclone ls pcloud: | head
+
+# Trigger initial sync manually
+sudo systemctl start cloud-sync.service
+
+# Check sync status
+sudo journalctl -u cloud-sync.service -f
+
+# Verify timer is active
+systemctl status cloud-sync.timer
+systemctl list-timers | grep cloud-sync
+```
+
 ### Vault Operations
 ```bash
 ansible-vault encrypt vault.yml
@@ -73,8 +115,12 @@ ansible-vault edit vault.yml
   - Second play: Configures system with core roles (runs as created user)
   - Includes: user-setup, git-setup, package-install (CLI only), msmtp-setup
   - Excludes: nas-mount, nas-backup, nas-sync (not compatible with LXC containers)
-- `vault.yml` - Encrypted secrets (NAS credentials, SMTP credentials, etc.)
-- `inventory/hosts` - Inventory with both local and remote host groups
+- `cloud_sync_setup.yml` - Playbook for cloud-to-NAS sync VM setup (runs against cloud-sync hosts)
+  - Connects as `lee` user (assumes user already exists with SSH key access)
+  - Requires `--ask-become-pass` for sudo operations
+  - Includes: git-setup, package-install (CLI only), nas-mount, msmtp-setup, cloud-sync
+- `vault.yml` - Encrypted secrets (NAS credentials, SMTP credentials, pCloud credentials, etc.)
+- `inventory/hosts` - Inventory with local, remote, and cloud-sync host groups
 - `group_vars/all/main.yml` - Global variables for all hosts
 
 ### Roles
@@ -85,6 +131,7 @@ ansible-vault edit vault.yml
 - **msmtp-setup** - Configures msmtp mail transfer agent for sending email notifications
 - **nas-backup** - Configures restic backups to NAS with email notifications (depends on nas-mount and msmtp-setup)
 - **nas-sync** - Configures lsyncd for real-time synchronization of user directories to NAS (depends on nas-mount)
+- **cloud-sync** - Syncs cloud storage (pCloud) to NAS using rclone with systemd timer (every 6 hours), email notifications on failure (depends on nas-mount and msmtp-setup)
 
 ### Multi-OS Support
 The `package-install` role uses `ansible_os_family` to include OS-specific task files:
@@ -95,11 +142,13 @@ The `package-install` role uses `ansible_os_family` to include OS-specific task 
 - Vault password file: `.ansible_vault_pass` (local, gitignored)
 - Config in `ansible.cfg` sets both `vault_password_file` and `ask_vault_pass = True` as fallback
 - Sensitive vars are prefixed with `vault_` in vault.yml
+- pCloud password must be obscured using `rclone obscure 'password'` before adding to vault
 
 ### Tags
 Each role defines tags for selective execution. Common patterns:
-- Role-specific: `user-setup`, `git-setup`, `nas-mount`, `package-install`, `msmtp-setup`, `nas-backup`, `nas-sync`
+- Role-specific: `user-setup`, `git-setup`, `nas-mount`, `package-install`, `msmtp-setup`, `nas-backup`, `nas-sync`, `cloud-sync`
 - Functional: `packages`, `cli-packages`, `desktop-packages`, `directories`, `credentials`, `mount`, `user`, `ssh`, `sudo`
+- Cloud-sync specific: `cloud-sync-rclone`, `cloud-sync-notifications`
 
 ### Key Patterns
 - Roles detect the actual user (via `$SUDO_USER`) to configure user-specific settings rather than root

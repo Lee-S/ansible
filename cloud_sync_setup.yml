@@ -1,0 +1,18 @@
+---
+- name: Cloud Sync Setup
+  hosts: cloud-sync
+  become: yes
+  gather_facts: yes
+  remote_user: lee
+  vars_files:
+    - vault.yml
+  vars:
+    install_desktop_packages: no
+    # Map vault variables to role variables
+    pcloud_user: "{{ vault_pcloud_user }}"
+    pcloud_pass: "{{ vault_pcloud_pass }}"
+
+  roles:
+    - git-setup
+    - package-install
+    - cloud-sync

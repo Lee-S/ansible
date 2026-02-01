@@ -1,0 +1,18 @@
+[Unit]
+Description=Cloud sync service - sync cloud storage to NAS
+After=network-online.target
+Wants=network-online.target
+{% if notify_email | length > 0 %}
+OnFailure=sync-notify-failure@%n.service
+{% endif %}
+
+[Service]
+Type=oneshot
+User={{ sync_user }}
+Group={{ sync_user }}
+ExecStart=/usr/local/bin/cloud-sync.sh
+Nice=19
+IOSchedulingClass=idle
+
+[Install]
+WantedBy=multi-user.target

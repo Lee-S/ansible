@@ -1,0 +1,127 @@
+---
+# rclone setup tasks for cloud-sync role
+
+# Install rclone
+- name: Install rclone
+  apt:
+    name: rclone
+    state: present
+    update_cache: yes
+  tags:
+    - cloud-sync
+    - cloud-sync-rclone
+
+# Create rclone config directory
+- name: Create rclone config directory
+  file:
+    path: "{{ rclone_config_dir }}"
+    state: directory
+    mode: '0700'
+    owner: "{{ sync_user }}"
+    group: "{{ sync_user }}"
+  tags:
+    - cloud-sync
+    - cloud-sync-rclone
+
+# Deploy rclone configuration
+- name: Deploy rclone configuration
+  template:
+    src: rclone.conf.j2
+    dest: "{{ rclone_config_file }}"
+    mode: '0600'
+    owner: "{{ sync_user }}"
+    group: "{{ sync_user }}"
+  tags:
+    - cloud-sync
+    - cloud-sync-rclone
+
+# Create cloud-sync config directory (user-level)
+- name: Create cloud-sync config directory
+  file:
+    path: "/home/{{ sync_user }}/.config/cloud-sync"
+    state: directory
+    mode: '0755'
+    owner: "{{ sync_user }}"
+    group: "{{ sync_user }}"
+  tags:
+    - cloud-sync
+    - cloud-sync-rclone
+
+# Deploy cloud-sync environment file
+- name: Deploy cloud-sync environment file
+  template:
+    src: cloud-sync.env.j2
+    dest: "/home/{{ sync_user }}/.config/cloud-sync/sync.env"
+    mode: '0600'
+    owner: "{{ sync_user }}"
+    group: "{{ sync_user }}"
+  tags:
+    - cloud-sync
+    - cloud-sync-rclone
+
+# Deploy cloud-sync script
+- name: Deploy cloud-sync script
+  template:
+    src: cloud-sync.sh.j2
+    dest: /usr/local/bin/cloud-sync.sh
+    mode: '0755'
+  tags:
+    - cloud-sync
+    - cloud-sync-rclone
+
+# Deploy systemd service
+- name: Deploy cloud-sync service
+  template:
+    src: cloud-sync.service.j2
+    dest: /etc/systemd/system/cloud-sync.service
+    mode: '0644'
+  notify:
+    - reload systemd
+  tags:
+    - cloud-sync
+    - cloud-sync-rclone
+
+# Deploy systemd timer
+- name: Deploy cloud-sync timer
+  template:
+    src: cloud-sync.timer.j2
+    dest: /etc/systemd/system/cloud-sync.timer
+    mode: '0644'
+  notify:
+    - reload systemd
+    - restart cloud-sync timer
+  tags:
+    - cloud-sync
+    - cloud-sync-rclone
+
+# Ensure handlers run before enabling timer
+- name: Flush handlers
+  meta: flush_handlers
+
+# Enable and start the timer
+- name: Enable and start cloud-sync timer
+  systemd:
+    name: cloud-sync.timer
+    state: started
+    enabled: yes
+  tags:
+    - cloud-sync
+    - cloud-sync-rclone
+
+# Display post-install instructions
+- name: Display rclone authentication instructions
+  debug:
+    msg:
+      - "Cloud-sync role installed successfully!"
+      - ""
+      - "IMPORTANT: You must authenticate rclone with pCloud before syncing will work."
+      - "Run the following command on the VM:"
+      - ""
+      - "  rclone config reconnect pcloud:"
+      - ""
+      - "This will provide a URL to authenticate in your browser."
+      - "After authentication, test with: rclone ls pcloud: | head"
+      - "Then trigger sync with: sudo systemctl start cloud-sync.service"
+  tags:
+    - cloud-sync
+    - cloud-sync-rclone

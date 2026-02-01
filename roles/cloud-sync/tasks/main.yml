@@ -1,0 +1,93 @@
+---
+# Main tasks for cloud-sync role
+
+# Include nas-mount role as dependency
+- name: Include nas-mount role
+  include_role:
+    name: nas-mount
+  tags:
+    - cloud-sync
+
+# Get user information
+- name: Get the actual username (not root)
+  shell: |
+    if [ "$SUDO_USER" ]; then
+      echo $SUDO_USER
+    else
+      echo "lee"
+    fi
+  register: actual_username
+  changed_when: false
+  tags:
+    - cloud-sync
+
+- name: Set sync_user fact
+  set_fact:
+    sync_user: "{{ actual_username.stdout }}"
+  tags:
+    - cloud-sync
+
+# Generate machine ID for notifications
+- name: Get hostname
+  command: hostname
+  register: hostname_result
+  changed_when: false
+  tags:
+    - cloud-sync
+
+- name: Set machine_id fact
+  set_fact:
+    machine_id: "{{ sync_user }}-{{ hostname_result.stdout }}"
+  tags:
+    - cloud-sync
+
+- name: Display machine ID
+  debug:
+    msg: "Machine ID: {{ machine_id }}"
+  tags:
+    - cloud-sync
+
+# Create state directory
+- name: Create cloud-sync state directory
+  file:
+    path: "{{ sync_state_dir }}"
+    state: directory
+    mode: '0755'
+    owner: "{{ sync_user }}"
+    group: "{{ sync_user }}"
+  tags:
+    - cloud-sync
+
+# Create destination directories on NAS
+- name: Create destination directories on NAS
+  file:
+    path: "{{ item.dest_path }}"
+    state: directory
+    mode: '0755'
+  loop: "{{ cloud_sync_jobs }}"
+  when: item.enabled | default(true)
+  tags:
+    - cloud-sync
+
+# Include rclone setup tasks
+- name: Include rclone setup tasks
+  include_tasks: rclone.yml
+  tags:
+    - cloud-sync
+
+# Setup msmtp for email notifications
+- name: Include msmtp-setup role
+  include_role:
+    name: msmtp-setup
+  when: notify_email | length > 0
+  tags:
+    - cloud-sync
+    - cloud-sync-notifications
+
+# Include notification tasks
+- name: Include notification tasks
+  include_tasks: notifications.yml
+  when: notify_email | length > 0
+  tags:
+    - cloud-sync
+    - cloud-sync-notifications

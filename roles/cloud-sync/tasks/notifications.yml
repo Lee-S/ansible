@@ -1,0 +1,70 @@
+---
+# Cloud-sync email notification setup tasks
+# Note: msmtp must be configured first (via msmtp-setup role)
+
+# Generate machine_id if not already set (needed when running only this task file)
+- name: Get hostname
+  command: hostname
+  register: hostname_result
+  changed_when: false
+  when: machine_id is undefined
+  tags:
+    - cloud-sync
+    - cloud-sync-notifications
+
+- name: Get actual username
+  shell: |
+    if [ "$SUDO_USER" ]; then
+      echo $SUDO_USER
+    else
+      echo "lee"
+    fi
+  register: actual_username
+  changed_when: false
+  when: machine_id is undefined
+  tags:
+    - cloud-sync
+    - cloud-sync-notifications
+
+- name: Set machine_id fact if not defined
+  set_fact:
+    machine_id: "{{ actual_username.stdout }}-{{ hostname_result.stdout }}"
+  when: machine_id is undefined
+  tags:
+    - cloud-sync
+    - cloud-sync-notifications
+
+# Deploy failure notification service
+- name: Create sync failure notification service
+  template:
+    src: sync-notify-failure.service.j2
+    dest: /etc/systemd/system/sync-notify-failure@.service
+    mode: '0644'
+  notify:
+    - reload systemd
+  tags:
+    - cloud-sync
+    - cloud-sync-notifications
+
+# Test notification email
+- name: Test cloud-sync notification email
+  shell: |
+    (echo "To: {{ notify_email }}"; \
+     echo "Subject: cloud-sync notification test from {{ machine_id }}"; \
+     echo "From: {{ smtp_from }}"; \
+     echo ""; \
+     echo "Cloud sync notification test from {{ machine_id }} - cloud-sync role configured successfully") | \
+    msmtp {{ notify_email }}
+  register: sync_email_test
+  changed_when: false
+  failed_when: false
+  tags:
+    - cloud-sync
+    - cloud-sync-notifications
+
+- name: Display email test result
+  debug:
+    msg: "{{ 'Cloud-sync notification email test sent successfully' if sync_email_test.rc == 0 else 'Email test failed - check msmtp configuration' }}"
+  tags:
+    - cloud-sync
+    - cloud-sync-notifications
