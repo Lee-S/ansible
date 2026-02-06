@@ -37,6 +37,7 @@ backup_excludes:
   - Downloads
   - "lee_local"  # Should have a separate backup strategy
   - pCloudDrive
+  - nas  # Exclude ~/nas symlink to prevent backing up NAS to itself
 
 
 # Notification settings (override in vault)
