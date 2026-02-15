@@ -3,10 +3,9 @@
 
 # Install rclone
 - name: Install rclone
-  apt:
+  package:
     name: rclone
     state: present
-    update_cache: yes
   tags:
     - cloud-sync
     - cloud-sync-rclone

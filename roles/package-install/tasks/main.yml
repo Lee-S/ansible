@@ -1,5 +1,33 @@
 ---
 # Main tasks for package-install role
 
+- name: Set OS family mapping
+  set_fact:
+    pkg_os_family: >-
+      {%- if ansible_os_family == 'Nobara' or ansible_distribution == 'Nobara' -%}
+        RedHat
+      {%- else -%}
+        {{ ansible_os_family }}
+      {%- endif -%}
+  tags:
+    - packages
+    - package-install
+    - always
+
+- name: Display detected OS
+  debug:
+    msg: "Detected: {{ ansible_distribution }} {{ ansible_distribution_version }} (OS Family: {{ ansible_os_family }} -> Using: {{ pkg_os_family }})"
+  tags:
+    - packages
+    - package-install
+    - info
+
+- name: Load OS-specific package lists
+  include_vars: "{{ pkg_os_family }}.yml"
+  tags:
+    - packages
+    - package-install
+    - always
+
 - name: Include OS-specific tasks
-  include_tasks: "{{ ansible_os_family | lower }}.yml"
+  include_tasks: "{{ pkg_os_family | lower }}.yml"

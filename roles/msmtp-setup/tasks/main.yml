@@ -2,11 +2,27 @@
 # Main tasks for msmtp-setup role
 # Sets up msmtp mail transfer agent for sending email notifications
 
+- name: Set OS family mapping
+  set_fact:
+    msmtp_os_family: >-
+      {%- if ansible_os_family == 'Nobara' or ansible_distribution == 'Nobara' -%}
+        RedHat
+      {%- else -%}
+        {{ ansible_os_family }}
+      {%- endif -%}
+  tags:
+    - msmtp-setup
+    - always
+
+- name: Load OS-specific package lists
+  include_vars: "{{ msmtp_os_family }}.yml"
+  tags:
+    - msmtp-setup
+    - always
+
 - name: Install msmtp packages
   package:
-    name:
-      - msmtp
-      - msmtp-mta
+    name: "{{ msmtp_packages }}"
     state: present
   tags:
     - msmtp-setup

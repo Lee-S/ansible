@@ -62,12 +62,7 @@
   register: package_verification
   failed_when: package_verification.rc != 0
   changed_when: false
-  loop:
-    - htop
-    - btop
-    - vim
-    - tmux
-    - tree
+  loop: "{{ critical_packages }}"
   when: install_cli_packages | bool
   tags:
     - packages

@@ -1,0 +1,6 @@
+---
+# Ubuntu/Debian-specific msmtp packages
+
+msmtp_packages:
+  - msmtp
+  - msmtp-mta  # Provides sendmail compatibility on Debian/Ubuntu

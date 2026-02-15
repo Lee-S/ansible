@@ -1,0 +1,13 @@
+---
+# Default variables for citrix-distrobox role
+
+# Distrobox configuration
+distrobox_name: "ubuntu-citrix"
+distrobox_image: "ubuntu:22.04"
+
+# Citrix ICA client configuration
+# The role will automatically detect the user and use the latest icaclient*.deb file from their ~/Downloads/
+# Download from: https://www.citrix.com/downloads/workspace-app/linux/workspace-app-for-linux-latest.html
+
+# Desktop entry configuration
+create_desktop_entry: yes

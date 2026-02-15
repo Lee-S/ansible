@@ -26,6 +26,7 @@ ansible all -m ping
 ansible-playbook local_setup.yml --tags "git-setup" --ask-vault-pass --ask-become-pass
 ansible-playbook local_setup.yml --tags "nas-mount" --ask-vault-pass --ask-become-pass
 ansible-playbook local_setup.yml --tags "package-install" --ask-vault-pass --ask-become-pass
+ansible-playbook local_setup.yml --tags "citrix-distrobox" --ask-vault-pass --ask-become-pass
 ansible-playbook local_setup.yml --tags "msmtp-setup" --ask-vault-pass --ask-become-pass
 ansible-playbook local_setup.yml --tags "nas-backup" --ask-vault-pass --ask-become-pass
 ansible-playbook local_setup.yml --tags "nas-sync" --ask-vault-pass --ask-become-pass
@@ -109,7 +110,7 @@ ansible-vault edit vault.yml
 
 ### Playbook Structure
 - `local_setup.yml` - Main playbook for local desktop/workstation setup (runs against localhost)
-  - Includes: user-setup, git-setup, package-install (all packages), nas-mount, msmtp-setup, nas-backup, nas-sync
+  - Includes: user-setup, git-setup, package-install (all packages), nas-mount, citrix-distrobox, msmtp-setup, nas-backup, nas-sync
 - `remote_setup.yml` - Playbook for remote headless server setup (runs against remote hosts)
   - First play: Creates user account and sets up SSH access (runs as root)
   - Second play: Configures system with core roles (runs as created user)
@@ -128,15 +129,20 @@ ansible-vault edit vault.yml
 - **git-setup** - Configures Git with user.name and user.email
 - **nas-mount** - Mounts CIFS/SMB shares from NAS with persistent fstab entries
 - **package-install** - Installs packages with separate CLI (server) and desktop (GUI) package lists, auto-detects OS and uses apt or dnf
+- **citrix-distrobox** - Installs Citrix Workspace (ICA client) inside an Ubuntu distrobox on Fedora-based systems, sets up .ica file associations (Fedora/Nobara only, requires icaclient*.deb in ~/Downloads/)
 - **msmtp-setup** - Configures msmtp mail transfer agent for sending email notifications
 - **nas-backup** - Configures restic backups to NAS with email notifications (depends on nas-mount and msmtp-setup)
 - **nas-sync** - Configures lsyncd for real-time synchronization of user directories to NAS (depends on nas-mount)
 - **cloud-sync** - Syncs cloud storage (pCloud) to NAS using rclone with systemd timer (every 6 hours), email notifications on failure (depends on nas-mount and msmtp-setup)
 
 ### Multi-OS Support
-The `package-install` role uses `ansible_os_family` to include OS-specific task files:
-- `debian.yml` - For Debian/Ubuntu family (uses apt)
-- `redhat.yml` - For RedHat/Fedora family (uses dnf)
+The `package-install` role uses `ansible_os_family` to automatically detect the OS and load appropriate packages:
+- **OS Detection**: Automatically detects Debian/Ubuntu (Pop!_OS) or RedHat/Fedora (Nobara)
+- **Package Lists**: OS-specific package lists in `vars/Debian.yml` and `vars/RedHat.yml`
+- **Task Files**: OS-specific installation tasks in `tasks/debian.yml` (uses apt) and `tasks/redhat.yml` (uses dnf)
+- **Supported Distributions**:
+  - Debian family: Ubuntu, Pop!_OS, Debian
+  - RedHat family: Fedora, Nobara, RHEL, CentOS
 
 ### Vault Configuration
 - Vault password file: `.ansible_vault_pass` (local, gitignored)
@@ -146,8 +152,9 @@ The `package-install` role uses `ansible_os_family` to include OS-specific task 
 
 ### Tags
 Each role defines tags for selective execution. Common patterns:
-- Role-specific: `user-setup`, `git-setup`, `nas-mount`, `package-install`, `msmtp-setup`, `nas-backup`, `nas-sync`, `cloud-sync`
+- Role-specific: `user-setup`, `git-setup`, `nas-mount`, `package-install`, `citrix-distrobox`, `msmtp-setup`, `nas-backup`, `nas-sync`, `cloud-sync`
 - Functional: `packages`, `cli-packages`, `desktop-packages`, `directories`, `credentials`, `mount`, `user`, `ssh`, `sudo`
+- Citrix-distrobox specific: `distrobox-install`, `distrobox-setup`, `citrix-install`, `citrix-wrapper`, `citrix-desktop`
 - Cloud-sync specific: `cloud-sync-rclone`, `cloud-sync-notifications`
 
 ### Key Patterns
@@ -157,3 +164,4 @@ Each role defines tags for selective execution. Common patterns:
 - Package installation is split into CLI (suitable for servers) and desktop (GUI apps) with variables to control which packages to install
 - Remote servers automatically skip desktop packages via `install_desktop_packages: no` in remote_setup.yml
 - NAS-related roles (nas-mount, nas-backup, nas-sync) are excluded from remote_setup.yml as they require capabilities not available in unprivileged LXC containers
+- citrix-distrobox role is Fedora/Nobara-only and will fail gracefully on Debian-based systems

@@ -1,0 +1,5 @@
+---
+# Fedora/Nobara-specific msmtp packages
+
+msmtp_packages:
+  - msmtp  # Includes sendmail compatibility on Fedora/Nobara

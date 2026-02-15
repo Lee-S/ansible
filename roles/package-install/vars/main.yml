@@ -6,12 +6,11 @@
 
 # Package manager specific settings
 apt_cache_timeout: 3600
-package_manager: apt
 
 # Verification packages - critical packages to verify after installation
+# Note: These must exist in both Debian and RedHat package lists
 critical_packages:
   - htop
   - btop
-  - vim
   - tmux
   - tree

@@ -1,34 +1,8 @@
 ---
 # Default variables for package-install role
 
-# CLI packages - suitable for both desktop and server
-cli_packages:
-  - autojump
-  - btop
-  - fzf
-  - htop
-  - inxi
-  - lm-sensors
-  - restic
-  - ripgrep
-  - silversearcher-ag
-  - stress
-  - thefuck
-  - tmux
-  - tree
-  - vim
-  - avahi-daemon
-
-
-# Desktop packages - GUI applications and desktop-specific tools
-desktop_packages:
-  - dconf-editor
-  - hardinfo
-  - kitty
-  - snapd
-  - solaar
-  - ubuntu-restricted-extras
-  - yubikey-manager
+# Package lists are defined in vars/Debian.yml and vars/RedHat.yml
+# They will be loaded automatically based on ansible_os_family
 
 # Control which package sets to install
 install_cli_packages: yes

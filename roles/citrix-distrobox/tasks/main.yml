@@ -1,0 +1,277 @@
+---
+# Main tasks for citrix-distrobox role
+
+- name: Verify running on Fedora/RedHat-based system
+  fail:
+    msg: "This role only runs on Fedora/RedHat-based distributions. Detected: {{ ansible_os_family }}"
+  when: ansible_os_family not in ['RedHat', 'Nobara']
+  tags:
+    - citrix-distrobox
+    - always
+
+- name: Get actual user (before become)
+  set_fact:
+    actual_user: "{{ ansible_env.SUDO_USER | default(lookup('env', 'USER')) }}"
+  when: actual_user is not defined
+  tags:
+    - citrix-distrobox
+    - always
+
+- name: Get actual user's home directory
+  shell: "getent passwd {{ actual_user }} | cut -d: -f6"
+  register: actual_user_home
+  changed_when: false
+  tags:
+    - citrix-distrobox
+    - always
+
+- name: Set user home directory
+  set_fact:
+    user_home_dir: "{{ actual_user_home.stdout }}"
+  tags:
+    - citrix-distrobox
+    - always
+
+- name: Install distrobox
+  dnf:
+    name: distrobox
+    state: present
+  tags:
+    - citrix-distrobox
+    - distrobox-install
+
+- name: Check if distrobox already exists
+  command: distrobox list
+  register: distrobox_list
+  changed_when: false
+  failed_when: false
+  become: no
+  become_user: "{{ actual_user }}"
+  tags:
+    - citrix-distrobox
+    - distrobox-setup
+
+- name: Create Ubuntu distrobox for Citrix
+  command: "distrobox create --name {{ distrobox_name }} --image {{ distrobox_image }} --yes"
+  when: "distrobox_name not in distrobox_list.stdout"
+  become: no
+  become_user: "{{ actual_user }}"
+  tags:
+    - citrix-distrobox
+    - distrobox-setup
+
+- name: Set Downloads directory path
+  set_fact:
+    downloads_path: "{{ user_home_dir }}/Downloads"
+  tags:
+    - citrix-distrobox
+    - citrix-install
+
+- name: Find latest Citrix .deb package in Downloads
+  find:
+    paths: "{{ downloads_path }}"
+    patterns: "icaclient*.deb"
+    file_type: file
+  register: citrix_packages
+  become: no
+  tags:
+    - citrix-distrobox
+    - citrix-install
+
+- name: Check if Citrix package was found
+  fail:
+    msg: |
+      No Citrix Workspace .deb package found in {{ downloads_path }}
+
+      Please download Citrix Workspace app:
+      1. Visit https://www.citrix.com/downloads/workspace-app/linux/workspace-app-for-linux-latest.html
+      2. Click "Download Citrix Workspace app for Linux (x86_64)"
+      3. Save the icaclient*.deb file to {{ downloads_path }}
+      4. Re-run this playbook
+
+      Detected user: {{ actual_user }}
+      Home directory: {{ user_home_dir }}
+  when: citrix_packages.files | length == 0
+  tags:
+    - citrix-distrobox
+    - citrix-install
+
+- name: Get the latest Citrix package
+  set_fact:
+    citrix_package_path: "{{ (citrix_packages.files | sort(attribute='mtime', reverse=true) | first).path }}"
+  when: citrix_packages.files | length > 0
+  tags:
+    - citrix-distrobox
+    - citrix-install
+
+- name: Display package being installed
+  debug:
+    msg: "Installing Citrix package: {{ citrix_package_path | basename }}"
+  tags:
+    - citrix-distrobox
+    - citrix-install
+    - info
+
+- name: Update package lists in distrobox
+  command: "distrobox enter {{ distrobox_name }} -- sudo apt-get update"
+  become: no
+  become_user: "{{ actual_user }}"
+  changed_when: false
+  tags:
+    - citrix-distrobox
+    - citrix-install
+
+- name: Install Citrix dependencies in distrobox
+  command: "distrobox enter {{ distrobox_name }} -- sudo DEBIAN_FRONTEND=noninteractive apt-get install -y libxkbcommon0 libxkbcommon-x11-0 libwebkit2gtk-4.0-37 libgstreamer-plugins-base1.0-0 libatk1.0-0 libatk-bridge2.0-0 libcups2 libgtk-3-0 libva-drm2 libva2 libva-x11-2 libvdpau1 libpulse0 libspeex1 libspeexdsp1 mesa-vulkan-drivers libgl1-mesa-dri libglx-mesa0 libxcursor1 xcursor-themes x11-utils"
+  become: no
+  become_user: "{{ actual_user }}"
+  tags:
+    - citrix-distrobox
+    - citrix-install
+
+- name: Copy Citrix package to distrobox
+  command: "cp '{{ citrix_package_path }}' /tmp/icaclient.deb"
+  become: no
+  become_user: "{{ actual_user }}"
+  tags:
+    - citrix-distrobox
+    - citrix-install
+
+- name: Install Citrix Workspace app from .deb package
+  command: "distrobox enter {{ distrobox_name }} -- bash -c 'sudo DEBIAN_FRONTEND=noninteractive dpkg -i /tmp/icaclient.deb || sudo apt-get install -f -y'"
+  become: no
+  become_user: "{{ actual_user }}"
+  tags:
+    - citrix-distrobox
+    - citrix-install
+
+- name: Accept Citrix license
+  command: "distrobox enter {{ distrobox_name }} -- sudo mkdir -p /opt/Citrix/ICAClient && sudo touch /opt/Citrix/ICAClient/.eula_accepted"
+  become: no
+  become_user: "{{ actual_user }}"
+  changed_when: false
+  tags:
+    - citrix-distrobox
+    - citrix-install
+
+- name: Create Citrix configuration directory
+  command: "distrobox enter {{ distrobox_name }} -- mkdir -p {{ user_home_dir }}/.ICAClient"
+  become: no
+  become_user: "{{ actual_user }}"
+  tags:
+    - citrix-distrobox
+    - citrix-install
+
+- name: Configure Citrix client settings for cursor fix
+  copy:
+    dest: "{{ user_home_dir }}/.ICAClient/wfclient.ini"
+    mode: '0644'
+    content: |
+      [WFClient]
+      UseFullScreen=No
+      TWIMode=Off
+
+      [Thinwire3.0]
+      UseXRender=On
+
+      [ClientDrive]
+      DisableDriveRedirection=On
+  become: no
+  become_user: "{{ actual_user }}"
+  tags:
+    - citrix-distrobox
+    - citrix-install
+
+- name: Create wrapper script for icaClient
+  copy:
+    dest: "/usr/local/bin/citrix-ica"
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      # Wrapper script to run Citrix ICA client from distrobox
+      # Set environment variables to fix cursor issues on multi-monitor setups
+      export XCURSOR_THEME=Adwaita
+      export XCURSOR_SIZE=24
+      distrobox enter {{ distrobox_name }} -- env XCURSOR_THEME=Adwaita XCURSOR_SIZE=24 /opt/Citrix/ICAClient/wfica "$@"
+  tags:
+    - citrix-distrobox
+    - citrix-wrapper
+
+- name: Create .desktop file for ICA files
+  copy:
+    dest: "/usr/share/applications/citrix-ica.desktop"
+    mode: '0644'
+    content: |
+      [Desktop Entry]
+      Name=Citrix Workspace (Distrobox)
+      Comment=Citrix Workspace app running in distrobox
+      Exec=/usr/local/bin/citrix-ica %u
+      Terminal=false
+      Type=Application
+      Icon=CitrixWorkspace
+      Categories=Network;RemoteAccess;
+      MimeType=application/x-ica;
+      StartupNotify=true
+      StartupWMClass=wfica
+  when: create_desktop_entry | bool
+  tags:
+    - citrix-distrobox
+    - citrix-desktop
+
+- name: Update desktop database
+  command: update-desktop-database /usr/share/applications
+  changed_when: false
+  when: create_desktop_entry | bool
+  tags:
+    - citrix-distrobox
+    - citrix-desktop
+
+- name: Register .ica MIME type
+  copy:
+    dest: "/usr/share/mime/packages/citrix-ica.xml"
+    mode: '0644'
+    content: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+        <mime-type type="application/x-ica">
+          <comment>Citrix ICA file</comment>
+          <glob pattern="*.ica"/>
+        </mime-type>
+      </mime-info>
+  when: create_desktop_entry | bool
+  tags:
+    - citrix-distrobox
+    - citrix-desktop
+
+- name: Update MIME database
+  command: update-mime-database /usr/share/mime
+  changed_when: false
+  when: create_desktop_entry | bool
+  tags:
+    - citrix-distrobox
+    - citrix-desktop
+
+- name: Set default application for .ica files
+  command: "xdg-mime default citrix-ica.desktop application/x-ica"
+  become: no
+  become_user: "{{ actual_user }}"
+  changed_when: false
+  when: create_desktop_entry | bool
+  tags:
+    - citrix-distrobox
+    - citrix-desktop
+
+- name: Display completion message
+  debug:
+    msg: |
+      Citrix Workspace has been installed in distrobox '{{ distrobox_name }}'
+      - Wrapper script: /usr/local/bin/citrix-ica
+      - Desktop entry: /usr/share/applications/citrix-ica.desktop
+      - .ica files will open with Citrix Workspace automatically
+
+      To test manually:
+        distrobox enter {{ distrobox_name }}
+        /opt/Citrix/ICAClient/wfica
+  tags:
+    - citrix-distrobox
+    - info
