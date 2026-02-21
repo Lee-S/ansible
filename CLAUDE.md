@@ -76,6 +76,52 @@ ansible-playbook cloud_sync_setup.yml --tags "cloud-sync" --ask-vault-pass --ask
 ansible-playbook cloud_sync_setup.yml --check
 ```
 
+### Ollama LLM Setup (AMD Strix Halo - max host)
+```bash
+# Test connectivity to ollama host
+ansible ollama -m ping
+
+# Run the full ollama setup playbook
+ansible-playbook ollama_setup.yml --ask-vault-pass --ask-become-pass
+
+# Syntax check
+ansible-playbook ollama_setup.yml --syntax-check
+
+# Run specific tasks
+ansible-playbook ollama_setup.yml --tags "ollama-install" --ask-vault-pass --ask-become-pass
+ansible-playbook ollama_setup.yml --tags "ollama-service" --ask-vault-pass --ask-become-pass
+ansible-playbook ollama_setup.yml --tags "ollama-models" --ask-vault-pass --ask-become-pass
+
+# Check mode (dry run)
+ansible-playbook ollama_setup.yml --check
+```
+
+#### Post-Install: Testing Ollama
+After running the playbook, test Ollama installation and memory allocation:
+```bash
+# Check Ollama service status
+sudo systemctl status ollama
+
+# Check GPU backend (Vulkan or ROCm)
+vulkaninfo --summary  # For Vulkan
+rocm-smi              # For ROCm
+
+# List available models
+ollama list
+
+# Pull a test model (if not done during playbook)
+ollama pull llama3.2
+
+# Run a test inference
+ollama run llama3.2 "Hello, how are you?"
+
+# Monitor memory usage during inference
+watch -n 1 'ollama ps'
+
+# Check service logs
+sudo journalctl -u ollama -f
+```
+
 #### Post-Install: Authenticate rclone with pCloud
 After running the playbook, you must authenticate rclone with pCloud (OAuth required):
 ```bash
@@ -120,8 +166,13 @@ ansible-vault edit vault.yml
   - Connects as `lee` user (assumes user already exists with SSH key access)
   - Requires `--ask-become-pass` for sudo operations
   - Includes: git-setup, package-install (CLI only), nas-mount, msmtp-setup, cloud-sync
+- `ollama_setup.yml` - Playbook for Ollama LLM setup on AMD Strix Halo system (runs against ollama hosts - specifically 'max')
+  - Connects locally (`ansible_connection=local`)
+  - Requires `--ask-become-pass` for sudo operations
+  - Includes: ollama-setup role only
+  - GPU Backend: Vulkan (default, more stable) or ROCm (better performance, requires ROCm 7.0.2+)
 - `vault.yml` - Encrypted secrets (NAS credentials, SMTP credentials, pCloud credentials, etc.)
-- `inventory/hosts` - Inventory with local, remote, and cloud-sync host groups
+- `inventory/hosts` - Inventory with local, remote, cloud-sync, and ollama host groups
 - `group_vars/all/main.yml` - Global variables for all hosts
 
 ### Roles
@@ -134,6 +185,7 @@ ansible-vault edit vault.yml
 - **nas-backup** - Configures restic backups to NAS with email notifications (depends on nas-mount and msmtp-setup)
 - **nas-sync** - Configures lsyncd for real-time synchronization of user directories to NAS (depends on nas-mount)
 - **cloud-sync** - Syncs cloud storage (pCloud) to NAS using rclone with systemd timer (every 6 hours), email notifications on failure (depends on nas-mount and msmtp-setup)
+- **ollama-setup** - Installs and configures Ollama LLM on AMD Strix Halo systems with GPU acceleration (Vulkan or ROCm backend), systemd service management, optional model pulling, memory allocation testing
 
 ### Multi-OS Support
 The `package-install` role uses `ansible_os_family` to automatically detect the OS and load appropriate packages:
@@ -152,10 +204,11 @@ The `package-install` role uses `ansible_os_family` to automatically detect the 
 
 ### Tags
 Each role defines tags for selective execution. Common patterns:
-- Role-specific: `user-setup`, `git-setup`, `nas-mount`, `package-install`, `citrix-distrobox`, `msmtp-setup`, `nas-backup`, `nas-sync`, `cloud-sync`
+- Role-specific: `user-setup`, `git-setup`, `nas-mount`, `package-install`, `citrix-distrobox`, `msmtp-setup`, `nas-backup`, `nas-sync`, `cloud-sync`, `ollama-setup`
 - Functional: `packages`, `cli-packages`, `desktop-packages`, `directories`, `credentials`, `mount`, `user`, `ssh`, `sudo`
 - Citrix-distrobox specific: `distrobox-install`, `distrobox-setup`, `citrix-install`, `citrix-wrapper`, `citrix-desktop`
 - Cloud-sync specific: `cloud-sync-rclone`, `cloud-sync-notifications`
+- Ollama-setup specific: `ollama-install`, `ollama-service`, `ollama-config`, `ollama-models`, `ollama-verify`, `ollama-rocm`, `ollama-vulkan`
 
 ### Key Patterns
 - Roles detect the actual user (via `$SUDO_USER`) to configure user-specific settings rather than root

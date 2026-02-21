@@ -1,0 +1,26 @@
+---
+- name: Ollama LLM Setup
+  hosts: ollama
+  become: yes
+  gather_facts: yes
+  vars_files:
+    - vault.yml
+  vars:
+    # Use Vulkan backend (more stable on Strix Halo)
+    # Change to 'rocm' for better performance (requires ROCm 7.0.2+)
+    ollama_gpu_backend: vulkan
+
+    # Models to pull after installation (optional)
+    # Uncomment and add models you want to test:
+    # ollama_models_to_pull:
+    #   - llama3.2
+    #   - phi3
+    #   - mistral
+    ollama_models_to_pull: []
+
+    # Memory allocation settings for AMD Strix Halo testing
+    ollama_max_loaded_models: 1
+    ollama_num_parallel: 1
+
+  roles:
+    - ollama-setup

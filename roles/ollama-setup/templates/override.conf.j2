@@ -1,0 +1,8 @@
+# Ollama service override configuration
+# Managed by Ansible - DO NOT EDIT MANUALLY
+
+[Service]
+Environment="HOME={{ ollama_data_dir }}"
+{% for key, value in ollama_env_vars.items() %}
+Environment="{{ key }}={{ value }}"
+{% endfor %}
