@@ -1,0 +1,44 @@
+---
+# Default variables for ollama-setup role
+
+# Ollama installation method: 'script' (official curl script) or 'package' (if available)
+ollama_install_method: script
+
+# GPU backend: 'rocm' (AMD ROCm for better performance) or 'vulkan' (more stable, broader compatibility)
+# Note: Strix Halo has some stability issues with ROCm, Vulkan is recommended for testing
+ollama_gpu_backend: vulkan
+
+# ROCm version (only used if ollama_gpu_backend is 'rocm')
+rocm_version: "6.3"
+
+# Ollama data directory (where models and config are stored)
+ollama_data_dir: /data/ollama
+
+# Ollama service configuration
+ollama_host: "0.0.0.0:11434"
+ollama_origins: "*"
+
+# Models to pull after installation (optional, can be empty list)
+# Examples: llama3.2, mistral, codellama, phi3
+ollama_models_to_pull: []
+
+# Memory configuration (optional environment variables)
+# OLLAMA_MAX_LOADED_MODELS - maximum number of models to load simultaneously
+# OLLAMA_NUM_PARALLEL - number of parallel requests to handle
+ollama_max_loaded_models: 1
+ollama_num_parallel: 1
+
+# Open WebUI (web interface for Ollama)
+openwebui_enabled: false
+openwebui_port: 8080
+openwebui_image: "ghcr.io/open-webui/open-webui:main"
+openwebui_data_dir: "/var/lib/openwebui"
+
+# Additional environment variables for Ollama service
+ollama_env_vars:
+  OLLAMA_HOST: "{{ ollama_host }}"
+  OLLAMA_ORIGINS: "{{ ollama_origins }}"
+  OLLAMA_MAX_LOADED_MODELS: "{{ ollama_max_loaded_models }}"
+  OLLAMA_NUM_PARALLEL: "{{ ollama_num_parallel }}"
+  OLLAMA_VULKAN: "1"  # Enable Vulkan GPU support
+  OLLAMA_FLASH_ATTENTION: "1"

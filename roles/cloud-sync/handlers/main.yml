@@ -1,0 +1,12 @@
+---
+# Handlers for cloud-sync role
+
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: restart cloud-sync timer
+  systemd:
+    name: cloud-sync.timer
+    state: restarted
+    enabled: yes

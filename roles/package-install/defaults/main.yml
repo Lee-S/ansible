@@ -1,30 +1,12 @@
 ---
 # Default variables for package-install role
 
-# Standard packages to install on PopOS 24.04 Cosmic
-standard_packages:
-  - anacron
-  - autojump
-  - btop
-  - dconf-editor
-  - fzf
-  - hardinfo
-  - htop
-  - inxi
-  - kitty
-  - lm-sensors
-  - restic
-  - ripgrep
-  - silversearcher-ag
-  - snapd
-  - solaar
-  - stress
-  - thefuck
-  - tmux
-  - tree
-  - ubuntu-restricted-extras
-  - vim
-  - yubikey-manager
+# Package lists are defined in vars/Debian.yml and vars/RedHat.yml
+# They will be loaded automatically based on ansible_os_family
+
+# Control which package sets to install
+install_cli_packages: yes
+install_desktop_packages: yes
 
 # Package installation options
 package_state: present

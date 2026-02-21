@@ -1,0 +1,39 @@
+---
+# Default variables for cloud-sync role
+
+# User settings (detected automatically, can override)
+sync_user: "{{ ansible_env.SUDO_USER | default('lee') }}"
+
+# Sync schedule (systemd calendar format) - every 6 hours
+sync_schedule: "*-*-* 00,06,12,18:00:00"
+
+# Base paths
+nas_base_path: /mnt/nas/lee
+
+# State directory for tracking sync status (user-level)
+sync_state_dir: "/home/{{ sync_user }}/.local/share/cloud-sync"
+
+# rclone configuration (user-level)
+rclone_config_dir: "/home/{{ sync_user }}/.config/rclone"
+rclone_config_file: "{{ rclone_config_dir }}/rclone.conf"
+
+# pCloud credentials (set in vault) - only used for initial config
+# After first run, you must authenticate with: rclone config reconnect pcloud:
+pcloud_user: ""
+pcloud_pass: ""
+
+# Cloud sync jobs - list of sync operations to perform
+cloud_sync_jobs:
+  - name: pcloud-photos
+    enabled: true
+    provider: pcloud
+    source_remote: "pcloud:Automatic Upload/Samsung SM-S928B"
+    dest_path: "{{ nas_base_path }}/Photos/pCloudAuto/Samsung SM-S928B"
+    sync_options:
+      - "--verbose"
+      - "--transfers=4"
+
+# Notification settings (override in vault or group_vars)
+# Note: SMTP configuration is handled by msmtp-setup role
+notify_email: ""
+smtp_from: "{{ notify_email }}"

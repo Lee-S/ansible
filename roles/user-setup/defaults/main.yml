@@ -1,0 +1,6 @@
+---
+# Default variables for user-setup role
+target_user: lee
+target_user_shell: /bin/bash
+target_user_groups: sudo
+ssh_key_path: "{{ lookup('env','HOME') }}/.ssh/id_ed25519.pub"

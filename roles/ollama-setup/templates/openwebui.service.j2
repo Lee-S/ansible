@@ -1,0 +1,22 @@
+[Unit]
+Description=Open WebUI - Web interface for Ollama
+After=network-online.target ollama.service
+Requires=ollama.service
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=3
+ExecStartPre=-/usr/bin/podman rm -f openwebui
+ExecStart=/usr/bin/podman run \
+  --name openwebui \
+  --rm \
+  --network=host \
+  -v {{ openwebui_data_dir }}:/app/backend/data:Z \
+  -e OLLAMA_BASE_URL=http://localhost:11434 \
+  -e PORT={{ openwebui_port }} \
+  {{ openwebui_image }}
+ExecStop=/usr/bin/podman stop openwebui
+
+[Install]
+WantedBy=multi-user.target

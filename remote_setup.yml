@@ -1,0 +1,25 @@
+---
+- name: Remote Server Setup - Initial Configuration
+  hosts: remote
+  become: yes
+  gather_facts: yes
+  vars_files:
+    - vault.yml
+
+  roles:
+    - user-setup
+
+- name: Remote Server Setup - User Configuration
+  hosts: remote
+  become: yes
+  gather_facts: yes
+  remote_user: lee
+  vars_files:
+    - vault.yml
+  vars:
+    install_desktop_packages: no
+
+  roles:
+    - git-setup
+    - package-install
+    - msmtp-setup

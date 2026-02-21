@@ -1,0 +1,82 @@
+---
+# Main tasks for package-install role
+
+- name: Update package cache
+  apt:
+    update_cache: "{{ update_cache }}"
+  tags:
+    - packages
+    - package-install
+    - cache-update
+
+- name: Install CLI packages
+  package:
+    name: "{{ cli_packages }}"
+    state: "{{ package_state }}"
+  when: install_cli_packages | bool
+  register: cli_package_install_result
+  tags:
+    - packages
+    - package-install
+    - cli-packages
+
+- name: Install desktop packages
+  package:
+    name: "{{ desktop_packages }}"
+    state: "{{ package_state }}"
+  when: install_desktop_packages | bool
+  register: desktop_package_install_result
+  tags:
+    - packages
+    - package-install
+    - desktop-packages
+
+- name: Display CLI package installation results
+  debug:
+    msg: |
+      CLI package installation completed:
+      - Total packages: {{ cli_packages | length }}
+      - Packages installed: {{ cli_packages | join(', ') }}
+      - Installation status: {{ 'Success' if cli_package_install_result is succeeded else 'Skipped' }}
+  when: install_cli_packages | bool
+  tags:
+    - packages
+    - package-install
+    - info
+
+- name: Display desktop package installation results
+  debug:
+    msg: |
+      Desktop package installation completed:
+      - Total packages: {{ desktop_packages | length }}
+      - Packages installed: {{ desktop_packages | join(', ') }}
+      - Installation status: {{ 'Success' if desktop_package_install_result is succeeded else 'Skipped' }}
+  when: install_desktop_packages | bool
+  tags:
+    - packages
+    - package-install
+    - info
+
+- name: Verify critical CLI packages are installed
+  command: dpkg -l {{ item }}
+  register: package_verification
+  failed_when: package_verification.rc != 0
+  changed_when: false
+  loop: "{{ critical_packages }}"
+  when: install_cli_packages | bool
+  tags:
+    - packages
+    - package-install
+    - verification
+
+- name: Display verification results
+  debug:
+    msg: "Critical package {{ item.item }} is installed and available"
+  loop: "{{ package_verification.results }}"
+  when:
+    - install_cli_packages | bool
+    - item.rc == 0
+  tags:
+    - packages
+    - package-install
+    - info

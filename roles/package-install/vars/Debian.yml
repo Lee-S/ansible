@@ -1,0 +1,30 @@
+---
+# Ubuntu/Debian-specific package lists
+
+# CLI packages - suitable for both desktop and server
+cli_packages:
+  - autojump
+  - btop
+  - fzf
+  - htop
+  - inxi
+  - lm-sensors
+  - restic
+  - ripgrep
+  - silversearcher-ag
+  - stress
+  - thefuck
+  - tmux
+  - tree
+  - vim
+  - avahi-daemon
+
+# Desktop packages - GUI applications and desktop-specific tools
+desktop_packages:
+  - dconf-editor
+  - hardinfo
+  - kitty
+  - snapd
+  - solaar
+  - ubuntu-restricted-extras
+  - yubikey-manager

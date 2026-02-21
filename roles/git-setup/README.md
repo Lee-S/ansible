@@ -76,7 +76,7 @@ None.
 
 2. **Run the playbook**:
    ```bash
-   ansible-playbook -i inventory/hosts site.yml --ask-become-pass
+   ansible-playbook -i inventory/hosts local_setup.yml --ask-become-pass
    ```
 
 ## What This Role Does
@@ -142,7 +142,7 @@ The role supports the following tags for selective execution:
 - `git-verify`: Verify final configuration only
 - `git-info`: Display configuration information only
 
-Example: `ansible-playbook site.yml --tags "git-config"`
+Example: `ansible-playbook local_setup.yml --tags "git-config"`
 
 ## Troubleshooting
 

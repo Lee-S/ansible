@@ -1,0 +1,26 @@
+---
+# Fedora/Nobara-specific package lists
+
+# CLI packages - suitable for both desktop and server
+cli_packages:
+  - autojump-zsh
+  - btop
+  - fzf
+  - htop
+  - inxi
+  - lm_sensors
+  - restic
+  - ripgrep
+  - the_silver_searcher
+  - stress
+  - thefuck
+  - tmux
+  - tree
+  - vim-enhanced
+
+# Desktop packages - GUI applications and desktop-specific tools
+desktop_packages:
+  - kitty
+  - solaar
+  - yubikey-manager
+  # Nobara already includes multimedia codecs, so no need for restricted-extras equivalent

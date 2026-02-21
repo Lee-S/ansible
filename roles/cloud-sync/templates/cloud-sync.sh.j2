@@ -1,0 +1,65 @@
+#!/bin/bash
+# Cloud sync script - syncs cloud storage to NAS
+# Managed by Ansible - do not edit manually
+
+set -euo pipefail
+
+# Load configuration
+source /home/{{ sync_user }}/.config/cloud-sync/sync.env
+
+# Logging
+LOG_TAG="cloud-sync"
+log() {
+    logger -t "$LOG_TAG" "$1"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') $1"
+}
+
+log "Starting cloud sync on machine ${MACHINE_ID}"
+
+# Track overall success
+SYNC_FAILED=0
+
+{% for job in cloud_sync_jobs %}
+{% if job.enabled | default(true) %}
+# Sync job: {{ job.name }}
+log "Starting sync job: {{ job.name }}"
+
+# Check if destination is accessible
+if [ ! -d "{{ job.dest_path }}" ]; then
+    log "ERROR: Destination not accessible at {{ job.dest_path }}"
+    log "Attempting to create destination directory..."
+    mkdir -p "{{ job.dest_path }}" || {
+        log "ERROR: Failed to create destination directory"
+        SYNC_FAILED=1
+    }
+fi
+
+if [ -d "{{ job.dest_path }}" ]; then
+    log "Running rclone sync for {{ job.name }}..."
+    if rclone sync \
+        "{{ job.source_remote }}" \
+        "{{ job.dest_path }}" \
+{% for opt in job.sync_options | default([]) %}
+        {{ opt }} \
+{% endfor %}
+        --config "${RCLONE_CONFIG}"; then
+        log "Sync job {{ job.name }} completed successfully"
+    else
+        log "ERROR: Sync job {{ job.name }} failed"
+        SYNC_FAILED=1
+    fi
+fi
+
+{% endif %}
+{% endfor %}
+
+# Update last sync timestamp
+echo "$(date -Iseconds)" > "${SYNC_STATE_DIR}/last-sync.timestamp"
+
+if [ $SYNC_FAILED -eq 0 ]; then
+    log "Cloud sync completed successfully"
+    exit 0
+else
+    log "Cloud sync completed with errors"
+    exit 1
+fi

@@ -10,6 +10,7 @@
     - git-setup
     - nas-mount
     - package-install
+    - citrix-distrobox
     - msmtp-setup
     - nas-backup
     - nas-sync
