@@ -76,10 +76,6 @@ ansible-playbook cloud_sync_setup.yml --tags "cloud-sync" --ask-vault-pass --ask
 ansible-playbook cloud_sync_setup.yml --check
 ```
 
-### llama.cpp Setup (AMD Strix Halo - max host)
-
-> TODO: llama.cpp role not yet implemented. Will replace ollama-setup.
-
 #### Post-Install: Authenticate rclone with pCloud
 After running the playbook, you must authenticate rclone with pCloud (OAuth required):
 ```bash
