@@ -9,7 +9,9 @@ toolbox create llama-rocm-7.2 \
   -- --device /dev/dri --device /dev/kfd \
   --group-add video --group-add render --group-add sudo \
   --security-opt seccomp=unconfined \
-  --volume /data:/data
+  -v /data/models:/data/models:Z
+
+## This mounts it at /run/host/data/models/
 
 toolbox enter llama-rocm-7.2
 ```
@@ -46,13 +48,13 @@ pip install huggingface_hub hf_xet
 HF_XET_HIGH_PERFORMANCE=1 hf download unsloth/Qwen3-30B-A3B-GGUF \
   BF16/Qwen3-30B-A3B-BF16-00001-of-00002.gguf \
   BF16/Qwen3-30B-A3B-BF16-00002-of-00002.gguf \
-  --local-dir /data/models/qwen3-30B-A3B/
+  --local-dir /run/host/data/models/qwen3-30B-A3B/
 
 # Qwen3-32B BF16 (~65 GB) - dense 32B model
 HF_XET_HIGH_PERFORMANCE=1 hf download unsloth/Qwen3-32B-GGUF \
   BF16/Qwen3-32B-BF16-00001-of-00002.gguf \
   BF16/Qwen3-32B-BF16-00002-of-00002.gguf \
-  --local-dir /data/models/qwen3-32B/
+  --local-dir /run/host/data/models/qwen3-32B/
 ```
 
 ---
@@ -64,12 +66,12 @@ HF_XET_HIGH_PERFORMANCE=1 hf download unsloth/Qwen3-32B-GGUF \
 ```bash
 # Qwen3-30B-A3B
 llama-server \
-  -m /data/models/qwen3-30B-A3B/BF16/Qwen3-30B-A3B-BF16-00001-of-00002.gguf \
+  -m /run/host/data/models/qwen3-30B-A3B/BF16/Qwen3-30B-A3B-BF16-00001-of-00002.gguf \
   --ctx-size 65536 -ngl 999 -fa 1 --no-mmap --host 0.0.0.0 --port 8080
 
 # Qwen3-32B
 llama-server \
-  -m /data/models/qwen3-32B/BF16/Qwen3-32B-BF16-00001-of-00002.gguf \
+  -m /run/host/data/models/qwen3-32B/BF16/Qwen3-32B-BF16-00001-of-00002.gguf \
   --ctx-size 65536 -ngl 999 -fa 1 --no-mmap --host 0.0.0.0 --port 8080
 ```
 
@@ -120,6 +122,7 @@ Q4_K_M (~18GB) — if you want faster inference and smaller footprint
 
 For your use case I'd go Q8_0 — near-BF16 quality at roughly half the size, leaving plenty of headroom.
 Then run it:
+
 ```bash
 ./llama-server -m ~/models/deepseek-r1-32b/DeepSeek-R1-Distill-Qwen-32B-Q8_0.gguf \
   --host 0.0.0.0 --port 8080 \

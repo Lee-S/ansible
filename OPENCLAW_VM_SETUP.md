@@ -22,13 +22,13 @@ OpenClaw is a capable autonomous agent that can send email, browse the web, run 
 
 | Host OS (Nobara Linux) | VM Guest (Fedora Server) |
 |---|---|
-| llama.cpp server → port 8080 | OpenClaw agent (user: max-ai) |
+| llama.cpp server → port 8080 | OpenClaw agent (user: maxbot) |
 | Your NAS (CIFS/NFS mounts) | Dedicated email account (IMAP) |
 | Home Assistant | Read-only GitHub token |
 | KVM hypervisor (user: lee) | Read-only calendar ICS |
 | VirtIO-fs shared folder (read-only drop) | Isolated NAT network (no LAN access) |
 
-> 🔒 **Security:** OpenClaw can execute shell commands and send emails. The VM is your primary safety layer. Never give `max-ai` sudo, never mount NAS read-write, and read every community skill before installing it.
+> 🔒 **Security:** OpenClaw can execute shell commands and send emails. The VM is your primary safety layer. Never give `maxbot` sudo, never mount NAS read-write, and read every community skill before installing it.
 
 ---
 
@@ -36,15 +36,15 @@ OpenClaw is a capable autonomous agent that can send email, browse the web, run 
 
 **Do you need a separate admin account?**
 
-Yes — this separation is worth doing. Keep `lee` as your host admin and confine `max-ai` entirely inside the VM.
+Yes — this separation is worth doing. Keep `lee` as your host admin and confine `maxbot` entirely inside the VM.
 
 | Account | Location | Role & Permissions |
 |---|---|---|
 | `lee` | Host OS | Your day-to-day admin. Manages KVM, mounts NAS, owns llama.cpp. Add to `libvirt` and `kvm` groups. Has sudo. |
 | `lee` (VM) | Inside VM | Your admin account inside the VM too. Used for installing packages and configuring the OS. Has sudo inside the VM only. |
-| `max-ai` | Inside VM only | The OpenClaw agent user. **NO sudo at all.** Owns only `~/.openclaw` and its workspace. This is the account OpenClaw runs as. |
+| `maxbot` | Inside VM only | The OpenClaw agent user. **NO sudo at all.** Owns only `~/.openclaw` and its workspace. This is the account OpenClaw runs as. |
 
-> ⚠️ **Note:** Do not create a `max-ai` account on the host OS. If OpenClaw ever escapes its working directory inside the VM, it still cannot reach anything on the host.
+> ⚠️ **Note:** Do not create a `maxbot` account on the host OS. If OpenClaw ever escapes its working directory inside the VM, it still cannot reach anything on the host.
 
 ---
 
@@ -104,11 +104,11 @@ sudo virt-host-validate
 Fedora Server (minimal install) is the best choice — lightweight, matches your host ecosystem, and has first-class virtio support. Ubuntu Server 24.04 LTS is also fine.
 
 ```bash
-sudo mkdir -p /var/lib/libvirt/images/isos
-cd /var/lib/libvirt/images/isos
+sudo mkdir -p /data/libvirt/images/isos
+cd /data/libvirt/images/isos
 
-# Fedora 41 Server netinstall (~800 MB)
-sudo wget https://download.fedoraproject.org/pub/fedora/linux/releases/41/Server/x86_64/iso/Fedora-Server-netinst-x86_64-41-1.4.iso
+# Fedora 43 Server netinstall (~800 MB)
+sudo wget https://download.fedoraproject.org/pub/fedora/linux/releases/43/Server/x86_64/iso/Fedora-Server-netinst-x86_64-43-1.6.iso
 
 # OR Ubuntu Server 24.04 LTS
 # sudo wget https://releases.ubuntu.com/24.04/ubuntu-24.04.2-live-server-amd64.iso
@@ -123,14 +123,28 @@ sudo virt-install \
   --name openclaw-agent \
   --ram 8192 \
   --vcpus 4 \
-  --disk path=/var/lib/libvirt/images/openclaw-agent.qcow2,size=40,format=qcow2 \
+  --disk path=/data/libvirt/images/openclaw-agent.qcow2,size=40,format=qcow2 \
   --os-variant fedora41 \
-  --cdrom /var/lib/libvirt/images/isos/Fedora-Server-netinst-x86_64-41-1.4.iso \
+  --cdrom /data/libvirt/images/isos/Fedora-Server-netinst-x86_64-43-1.6.iso \
   --network network=default \
   --graphics spice \
   --video qxl \
   --channel unix,target.type=virtio,target.name=org.qemu.guest_agent.0
 ```
+
+> ⚠️ **Note:** Use `--os-variant fedora41` even when installing Fedora 43 — the osinfo database on Nobara may not yet include `fedora43`. Check available variants with `virt-install --osinfo list | grep fedora`.
+>
+> ⚠️ **Note:** If you get `unrecognized arguments` errors when pasting this multi-line command, trailing spaces after the `\` are breaking line continuation. Write it to a script file and run that instead:
+> ```bash
+> cat > /tmp/create-vm.sh << 'EOF'
+> sudo virt-install \
+>   --name openclaw-agent \
+>   ...
+> EOF
+> bash /tmp/create-vm.sh
+> ```
+
+> ⚠️ **Note:** During Fedora 43 installation you will be asked to choose between **Fedora Custom Operating System** and **Fedora Server Edition** — choose **Fedora Server Edition**.
 
 > ⚠️ **Note:** 8 GB RAM and 4 vCPUs is more than enough — OpenClaw does no local inference, it just talks to llama.cpp on your host. Bump disk to 60 GB if you plan to stage large file analysis jobs.
 
@@ -141,7 +155,7 @@ virt-manager opens a graphical console to the installer. During setup:
 - Choose **Minimal Install** — no desktop required
 - Set hostname to `openclaw-agent`
 - Create user `lee` inside the VM, mark as Administrator (this is your in-VM sudo account — separate from host `lee`)
-- Do **NOT** create `max-ai` yet — do this after first boot
+- Do **NOT** create `maxbot` yet — do this after first boot
 - Set a root password (emergency use only)
 
 ### 4.4 First boot — update and install essentials
@@ -151,43 +165,82 @@ Log in as `lee` inside the VM and run:
 ```bash
 sudo dnf update -y
 
-sudo dnf install -y curl wget git nodejs npm qemu-guest-agent
+sudo dnf install -y curl wget git
 
-# Enable guest agent (allows clean shutdown from host)
+# Install Node 22+ (OpenClaw requires Node 22 or newer — Fedora's default repos
+# often ship an older version, so use NodeSource)
+curl -fsSL https://rpm.nodesource.com/setup_22.x | sudo bash -
+sudo dnf install -y nodejs
+
+# Install and enable the QEMU guest agent (not included in Fedora Server by default)
+sudo dnf install -y qemu-guest-agent
 sudo systemctl enable --now qemu-guest-agent
 
-# Check Node version — OpenClaw needs 18+
+# Install spice-vdagent to enable copy/paste between host and VM
+sudo dnf install -y spice-vdagent
+sudo systemctl enable --now spice-vdagentd
+
+# Install a minimal desktop so you can use a browser inside the VM
+sudo dnf install -y @gnome-desktop
+sudo systemctl set-default graphical.target
+sudo reboot
+
+# Verify Node version — must be 22+
 node --version
 ```
 
+> ✅ **Tip:** Get the VM's IP address from the host with `sudo virsh domifaddr openclaw-agent` — useful for SSH access.
+
 ### 4.5 Verify host connectivity from inside the VM
 
-The KVM NAT default gateway — your host — is always reachable at `10.0.2.2`. Verify your llama.cpp server is reachable before going any further:
+With libvirt's default NAT network, the host is reachable from the VM via the `virbr0` bridge — typically `192.168.122.1`. Check the actual IP on the host first:
+
+```bash
+# On the HOST:
+ip addr show virbr0
+# Look for: inet 192.168.122.1/24
+```
+
+Then verify your llama.cpp server is reachable from inside the VM:
 
 ```bash
 # From inside the VM:
-curl http://10.0.2.2:8080/v1/models
+curl http://192.168.122.1:8080/v1/models
 
 # You should get a JSON response listing your loaded model.
-# If this fails, check that llama.cpp is bound to 0.0.0.0
-# (not 127.0.0.1) on the host.
 ```
 
-> ✅ **Tip:** If llama.cpp only listens on `127.0.0.1`, restart it with `--host 0.0.0.0 --port 8080`. This makes it reachable from the VM but it remains firewalled from your wider LAN by your router.
+> ⚠️ **Note:** `10.0.2.2` is the gateway for QEMU user-mode networking, not libvirt bridge networking. With libvirt's default network use `192.168.122.1` instead.
+
+If the curl fails, check two things on the **host**:
+
+**1. llama.cpp must bind to `0.0.0.0`** (not `127.0.0.1`):
+```bash
+# Restart llama.cpp with:
+--host 0.0.0.0 --port 8080
+```
+
+**2. Firewall must allow port 8080 on the libvirt zone:**
+```bash
+sudo firewall-cmd --zone=libvirt --add-port=8080/tcp --permanent
+sudo firewall-cmd --reload
+```
+
+> ✅ **Tip:** Binding llama.cpp to `0.0.0.0` makes it reachable from the VM but it remains firewalled from your wider LAN by your router.
 
 ---
 
-## 5. Setting Up the max-ai User and File Access
+## 5. Setting Up the maxbot User and File Access
 
-### 5.1 Create the max-ai account (inside VM, as lee)
+### 5.1 Create the maxbot account (inside VM, as lee)
 
 ```bash
 # Create maxbot with no sudo access
 sudo useradd -m -s /bin/bash maxbot
-sudo passwd max-ai
+sudo passwd maxbot
 
 # Verify — this should say 'not allowed'
-sudo -l -U max-ai
+sudo -l -U maxbot
 ```
 
 ### 5.2 Create working directories
@@ -238,31 +291,52 @@ sudo virsh edit openclaw-agent
 sudo virsh reboot openclaw-agent
 ```
 
-**Step 3 — inside the VM, mount it as max-ai's read-only folder:**
+**Step 3 — inside the VM, mount it as maxbot's read-only folder:**
 
 ```bash
 # Add to /etc/fstab inside the VM
-echo 'nas-share  /home/max-ai/nas-files  virtiofs  ro,defaults  0  0' \
+echo 'nas-share  /home/maxbot/nas-files  virtiofs  ro,defaults  0  0' \
   | sudo tee -a /etc/fstab
 
 sudo mount -a
 
 # Verify
-ls /home/max-ai/nas-files
+ls /home/maxbot/nas-files
 ```
 
 ---
 
 ## 6. Installing OpenClaw in the VM
 
-### 6.1 Switch to max-ai and install
+### 6.1 Switch to maxbot and install
+
+SSH in directly as `maxbot` rather than using `su` — this gives a proper login session with D-Bus, which OpenClaw's gateway requires:
 
 ```bash
-# Inside the VM — switch to max-ai
-sudo su - max-ai
+# Set a password for maxbot first (as lee):
+sudo passwd maxbot
 
-# Install OpenClaw
-npm install -g @openclaw/openclaw
+# Then SSH in as maxbot:
+ssh maxbot@localhost
+```
+
+Configure npm to install globals into the user's home directory (avoids permission issues):
+
+```bash
+mkdir -p ~/.npm-global
+npm config set prefix '~/.npm-global'
+echo 'export PATH="$PATH:/home/maxbot/.npm-global/bin"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+Install OpenClaw:
+
+```bash
+# Recommended: use the official installer (handles Node detection and onboarding)
+curl -fsSL https://openclaw.ai/install.sh | bash
+
+# OR install manually if you prefer:
+# npm install -g openclaw@latest
 
 # Confirm installation
 openclaw --version
@@ -273,61 +347,55 @@ openclaw --version
 The wizard walks you through all initial configuration. Have your dedicated email credentials and GitHub token ready:
 
 ```bash
-openclaw wizard
+openclaw onboard
 
 # Wizard prompts and recommended answers:
 #
-# Agent name:           Maxbot
-# Your name:            Lee
-# LLM provider:         OpenAI Compatible
-# API base URL:         http://10.0.2.2:8080/v1
-# API key:              none  (any string works, llama.cpp ignores it)
-# Model name:           (paste the model name from curl /v1/models above)
-# Workspace directory:  /home/max-ai/.openclaw/workspace
+# Agent name:              Maxbot
+# Your name:               Lee
+# Model/auth provider:     Custom Provider
+# Endpoint compatibility:  OpenAI-compatible (Uses /chat/completions)
+# API base URL:            http://192.168.122.1:8080/v1
+# API key:                 none  (any string works, llama.cpp ignores it)
+# Model name:              (paste the id from: curl http://192.168.122.1:8080/v1/models)
+# Workspace directory:     /home/maxbot/.openclaw/workspace
 ```
 
 ### 6.3 Verify the LLM connection
 
 ```bash
-# Quick connectivity test
-openclaw chat 'What model are you running? Reply in one sentence.'
+# Probe the gateway and LLM connection (comprehensive debug output)
+openclaw gateway probe
 
-# Should respond using your llama.cpp model.
+# Or run the built-in diagnostics tool
+openclaw doctor
+
+# The web dashboard also lets you send a test message — open in the VM's browser:
+# http://127.0.0.1:18789/
 # If you get a connection error, re-check that llama.cpp
 # is listening on 0.0.0.0 not 127.0.0.1
 ```
 
-### 6.4 Run as a systemd service (back as lee in VM)
+### 6.4 Start the gateway
 
-Exit `maxbot` back to `lee`, then create a systemd unit so OpenClaw starts automatically:
+OpenClaw uses a systemd **user** service, which requires a proper login session. Always SSH in as `maxbot` (not `su - maxbot`) so that D-Bus is available.
+
+Enable lingering so the user service starts at boot without an active login (run as `lee`):
 
 ```bash
-exit   # back to lee
-
-sudo tee /etc/systemd/system/openclaw.service > /dev/null <<'EOF'
-[Unit]
-Description=OpenClaw AI Agent Gateway
-After=network.target
-
-[Service]
-Type=simple
-User=maxbot
-WorkingDirectory=/home/max-ai/.openclaw
-ExecStart=/usr/local/bin/openclaw gateway
-Restart=on-failure
-RestartSec=10
-Environment=NODE_ENV=production
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-sudo systemctl daemon-reload
-sudo systemctl enable --now openclaw
-
-# Check it came up cleanly
-sudo journalctl -u openclaw -n 30
+sudo loginctl enable-linger maxbot
 ```
+
+Then as `maxbot` (via SSH), start and enable the gateway:
+
+```bash
+openclaw gateway start
+openclaw gateway status
+```
+
+The gateway binds to loopback (`127.0.0.1:18789`) by default. The dashboard is accessible at `http://127.0.0.1:18789/` from a browser **inside the VM** — open it from the GNOME desktop in the virt-manager console.
+
+> ✅ **Tip:** This is why GNOME was installed in section 4.4 — it's the simplest way to access the dashboard while keeping the VM fully isolated.
 
 ---
 
@@ -380,7 +448,7 @@ Already handled via VirtIO-fs in Section 5. The key security properties:
 
 ## 8. Configuring SOUL.md
 
-SOUL.md is OpenClaw's personality and permission file. It is read at startup and governs what the agent will and will not do. Edit it as `max-ai` inside the VM:
+SOUL.md is OpenClaw's personality and permission file. It is read at startup and governs what the agent will and will not do. Edit it as `maxbot` inside the VM:
 
 ```bash
 nano /home/maxbot/.openclaw/workspace/SOUL.md
@@ -421,7 +489,12 @@ all inference. You have no access to the host OS or local network.
 - When uncertain, say so clearly rather than guessing
 ```
 
-> ⚠️ **Note:** After editing SOUL.md, restart the service: `sudo systemctl restart openclaw` (run as `lee` in the VM)
+> ⚠️ **Note:** After editing SOUL.md, restart the gateway. OpenClaw installs a systemd **user** service under `maxbot`, so restart it as `maxbot` (via SSH):
+> ```bash
+> openclaw gateway restart
+> # or equivalently:
+> systemctl --user restart openclaw-gateway.service
+> ```
 
 ---
 
@@ -435,7 +508,7 @@ Once OpenClaw is connected to a messaging front-end (Telegram is the quickest to
 What LLM model are you using and what is your API endpoint?
 ```
 
-Expected: OpenClaw names your llama.cpp model and shows the `10.0.2.2:8080` endpoint.
+Expected: OpenClaw names your llama.cpp model and shows the `192.168.122.1:8080` endpoint.
 
 ### 9.2 Confirm file access
 
@@ -507,7 +580,7 @@ sudo virsh snapshot-revert openclaw-agent clean-state-2025-02
 sudo journalctl -u openclaw -f
 
 # Check for unexpected file activity
-find /home/max-ai -newer /home/max-ai/.openclaw/openclaw.json -type f
+find /home/maxbot -newer /home/maxbot/.openclaw/openclaw.json -type f
 ```
 
 > 🔒 **Security:** If OpenClaw starts producing output that looks like it is following instructions you did not give (prompt injection via an email or document), stop the service immediately with `sudo systemctl stop openclaw` and review the logs before restarting.
