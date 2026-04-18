@@ -7,6 +7,10 @@ Before running the playbook, ensure you have:
 - Ansible installed (`pip install ansible`)
 - This repository checked out
 - Network connectivity to your NAS at `nas.local`
+- Passwordless sudo configured for your user (required — Ansible is incompatible with `sudo-rs`'s prompt format):
+  ```bash
+  echo 'lee ALL=(ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/lee-nopasswd
+  ```
 
 ## Initial Setup
 
