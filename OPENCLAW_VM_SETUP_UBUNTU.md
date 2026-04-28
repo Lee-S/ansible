@@ -26,9 +26,9 @@ OpenClaw is a capable autonomous agent that can send email, browse the web, run 
 | Your NAS (CIFS/NFS mounts) | Dedicated email account (IMAP) |
 | Home Assistant | Read-only GitHub token |
 | KVM hypervisor (user: lee) | Read-only calendar ICS |
-| VirtIO-fs shared folder (read-only drop) | Isolated NAT network (no LAN access) |
+| NAS share (max_share, rw via CIFS) | Isolated NAT network (no LAN access) |
 
-> **Security:** OpenClaw can execute shell commands and send emails. The VM is your primary safety layer. Never give `maxbot` sudo, never mount NAS read-write, and read every community skill before installing it.
+> **Security:** OpenClaw can execute shell commands and send emails. The VM is your primary safety layer. Never give `maxbot` sudo, restrict the NAS `maxbot` user to the `max_share` share only, and read every community skill before installing it.
 
 ---
 
@@ -274,64 +274,58 @@ sudo -u maxbot mkdir -p /home/maxbot/.openclaw/workspace
 sudo -u maxbot mkdir -p /home/maxbot/nas-files
 ```
 
-### 5.3 Expose NAS files via VirtIO-fs (host → VM, read-only)
+### 5.3 Mount the NAS share directly in the VM (read-write)
 
-Rather than giving the VM any network path to your NAS, you mount the NAS on the host first, then share that mount into the VM via VirtIO-fs. The VM never sees NAS credentials.
+The VM mounts the NAS share directly via CIFS using a dedicated `maxbot` NAS user that has access only to `max_share`. This lets maxbot read files you drop there from any device on your home network and write output back.
 
-**Step 1 — on the HOST, mount the NAS share:**
+**Step 1 — on the NAS, create a dedicated user**
+
+Create a `maxbot` user on your NAS and restrict it to the `max_share` share only. The exact steps depend on your NAS OS (Synology/TrueNAS/etc). The key point: `maxbot` on the NAS should have read/write access to `max_share` and no access to any other share.
+
+**Step 2 — inside the VM, create the credentials file and mount point:**
 
 ```bash
-# Install CIFS utilities if not already present
+# Install CIFS utilities
 sudo apt install -y cifs-utils
 
-# Create credentials file (600 permissions)
+# Create credentials file (600 permissions) using the NAS maxbot user
 sudo tee /etc/maxbot-nas.creds > /dev/null <<'EOF'
-username=YOUR_NAS_USER
-password=YOUR_NAS_PASSWORD
+username=maxbot
+password=YOUR_MAXBOT_NAS_PASSWORD
 EOF
 sudo chmod 600 /etc/maxbot-nas.creds
 
-# Mount read-only
-sudo mkdir -p /mnt/maxbot-nas
-sudo mount -t cifs //192.168.X.X/your-share /mnt/maxbot-nas \
-  -o credentials=/etc/maxbot-nas.creds,ro,uid=1000,gid=1000
+# Create mount point
+sudo mkdir -p /mnt/max_share
+```
 
-# Add to /etc/fstab for persistence
-echo '//192.168.X.X/your-share /mnt/maxbot-nas cifs credentials=/etc/maxbot-nas.creds,ro 0 0' \
+**Step 3 — find maxbot's UID and GID in the VM:**
+
+```bash
+id maxbot
+# Note the uid and gid — typically 1001
+```
+
+**Step 4 — add to /etc/fstab inside the VM** (replace `1001` if your uid/gid differs):
+
+```bash
+echo '//192.168.50.2/max_share /mnt/max_share cifs credentials=/etc/maxbot-nas.creds,rw,uid=1001,gid=1001,file_mode=0664,dir_mode=0775 0 0' \
   | sudo tee -a /etc/fstab
 ```
 
-**Step 2 — add the VirtIO-fs device to the VM. Edit the VM XML on the host:**
+**Step 5 — reload systemd and mount:**
 
 ```bash
-sudo virsh edit openclaw-agent
+sudo systemctl daemon-reload
+sudo mount /mnt/max_share
 
-# Inside <devices>, add:
-#   <filesystem type='mount' accessmode='passthrough'>
-#     <driver type='virtiofs'/>
-#     <source dir='/mnt/maxbot-nas'/>
-#     <target dir='nas-share'/>
-#     <readonly/>
-#   </filesystem>
+# Verify the mount is rw
+mount | grep max_share
+# Should show: rw,...,uid=1001,...
 
-# Then reboot the VM
-sudo virsh reboot openclaw-agent
-```
-
-**Step 3 — inside the VM, install virtiofs support and mount:**
-
-```bash
-# Ensure virtiofs kernel module is available (it is included in Ubuntu 24.04 kernel)
-sudo modprobe virtiofs
-
-# Add to /etc/fstab inside the VM
-echo 'nas-share  /home/maxbot/nas-files  virtiofs  ro,defaults  0  0' \
-  | sudo tee -a /etc/fstab
-
-sudo mount -a
-
-# Verify
-ls /home/maxbot/nas-files
+# Test write as maxbot
+sudo -u maxbot touch /mnt/max_share/test-write.txt && echo "Write OK"
+sudo -u maxbot rm /mnt/max_share/test-write.txt
 ```
 
 ---
@@ -423,9 +417,16 @@ openclaw gateway start
 openclaw gateway status
 ```
 
-The gateway binds to loopback (`127.0.0.1:18789`) by default. The dashboard is accessible at `http://127.0.0.1:18789/` from a browser **inside the VM** — open it from the GNOME desktop in the virt-manager console.
+The gateway binds to loopback (`127.0.0.1:18789`) by default. You can access the dashboard from a browser on the **host machine** by forwarding the port over SSH:
 
-> **Tip:** This is why `ubuntu-desktop-minimal` was installed in section 4.4 — it's the simplest way to access the dashboard while keeping the VM fully isolated.
+```bash
+# Run this on the HOST — forwards host port 18789 to the VM's loopback
+ssh -N -L 18789:127.0.0.1:18789 maxbot@192.168.122.99
+```
+
+Then open `http://127.0.0.1:18789/` in your host browser. The `-N` flag keeps the tunnel open without starting a shell. Run it in a terminal you leave open, or background it with `&`.
+
+> **Tip:** You can also access the dashboard from a browser inside the VM directly at `http://127.0.0.1:18789/` — this is why `ubuntu-desktop-minimal` was installed in section 4.4.
 
 ---
 
@@ -466,11 +467,12 @@ Use a static ICS share rather than full OAuth. OpenClaw can read your schedule b
 
 ### 7.4 NAS file access
 
-Already handled via VirtIO-fs in Section 5. The key security properties:
+Already handled via CIFS in Section 5. The key security properties:
 
-- The VM has no network route to your NAS — it cannot ping or connect to it
-- Files arrive only via the read-only `~/nas-files` mount
-- To change what OpenClaw can see, adjust the host-side `/mnt/maxbot-nas` mount — the VM config never changes
+- The `maxbot` NAS user is restricted to `max_share` only — it cannot access any other share on the NAS
+- The mount is read-write so maxbot can write output files back to the share
+- You (as `lee`) can drop files into `max_share` from any device on your home network; maxbot picks them up from `/mnt/max_share` inside the VM
+- To change what OpenClaw can see, adjust the NAS share permissions for the `maxbot` NAS user
 
 > **Security:** Do not install community OpenClaw skills without reading their source first. Stick to first-party skills initially. Community skills run with the same permissions as OpenClaw itself.
 
