@@ -13,6 +13,10 @@
 
 > **Note:** The original doc had nvme0n1 and nvme1n1 swapped — confirmed wrong by `lsblk` and `/sys/class/nvme/nvme*/model`.
 
+> **Warning — device names are not stable:** `nvme0n1`/`nvme1n1` are assigned by kernel probe order at boot and can change after BIOS updates, kernel updates, or hardware changes. Never use these paths in fstab or scripts. Use UUIDs (per partition) or the stable by-id paths instead:
+> - Kingston: `/dev/disk/by-id/nvme-KINGSTON_OM8TAP42048K1-A00_50026B73842AC518`
+> - Crucial:  `/dev/disk/by-id/nvme-CT2000P310SSD8_253652B8226F`
+
 ---
 
 ## Benchmark Results
